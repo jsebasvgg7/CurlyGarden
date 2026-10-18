@@ -1,0 +1,8 @@
+local.properties
+keystore.properties
+*.keystore
+*.jks
+*.hprof
+.gradle/
+build/
+CurlyGardenDoc.md
