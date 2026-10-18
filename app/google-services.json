@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "133447850037",
+    "project_id": "curlygarden-23741",
+    "storage_bucket": "curlygarden-23741.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:133447850037:android:68ba16d393eb385cfdf97c",
+        "android_client_info": {
+          "package_name": "com.curlygarden.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "133447850037-kfaa9lbns0h2ub27cis4s0u8chbg2tjb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.curlygarden.app",
+            "certificate_hash": "611157bd37848960a35ea1552d4042aeb59b3a53"
+          }
+        },
+        {
+          "client_id": "133447850037-rnskob9vjdapb72gn2fpfm9dna1a6v6v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.curlygarden.app",
+            "certificate_hash": "af216ec19c3ff9a83771c6623fc0b67ee567f542"
+          }
+        },
+        {
+          "client_id": "133447850037-gg7b2tu39e8l8c7m04degg60ckgh07mv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA23rH2E6nD00y-6c2ucILGQC7m-Vd9ldo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "133447850037-gg7b2tu39e8l8c7m04degg60ckgh07mv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

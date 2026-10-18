@@ -1,0 +1,116 @@
+Mi recomendación es el escritor de la racha primero: es lo más pequeño, ya tienes dos módulos que pueden alimentarla (Draw y Talk), y le da vida real a algo que hoy en el Home es solo decorativo. Después, Recuerdos, porque desbloquea el corazón del historial de Draw, que hoy no hace nada visible.
+Si hagamos lo mas simple que es racha. Mi idea es que como existe 4 modulos de espacios (recuerdos es mas algo a parte). La racha funcione como si hiciste un dibujo, si mandaste un mensaje o si finalizaste una actividad que quedo en registro eso dispare el activador de contador de la racha, la racha se pierde cuando desde las 00:00 hasta las 23:59 no se hizo ninguna actividad lo que regresa todo el progreso yo vi un diseño que me gusto mucho para los dots de semanas. De paso podemos configurar el tiempo que tambien tiene el modulo en perfil que la idea es que cuente los dias del vinculo o el tiempo mejor dicho esto es simplisimo desde que inicio hasta que se desvincule al desvincularse el registro de archiva aun no tengo planes muy concretos para rachas maximas o tiempo de vinculacion archivada pero la idea es que se guarde por si hago un recopilatorio o un sotano jaja. Que archivos vas a necesitar y dime si quedo clara la idea.
+Quedó clara. Te devuelvo cómo la entendí, marco lo que necesito que me confirmes y te pido los archivos.
+
+## Cómo entendí la idea
+
+**Racha**
+- Cuenta como actividad: enviar una carta en Talk, terminar una ronda de Draw (y a futuro, completar una actividad de Play o Imagine).
+- Un día es de 00:00 a 23:59. Si pasa un día completo sin ninguna actividad, la racha vuelve a 0.
+- La fila semanal del Home deja de ser simulada y muestra los días reales, con el estilo del diseño de referencia (el número dentro de una llama en los días cumplidos, atenuado en los futuros).
+
+**Tiempo de vínculo**
+- Cuenta desde que se vinculan hasta que se desvinculan. Reemplaza los "0 días juntos" y "0m tiempo hoy" del perfil.
+- Al desvincularse, el registro se archiva para un posible recopilatorio.
+
+## Lo que quiero confirmar antes de codificar
+
+**1. ¿La racha es de la pareja o de cada uno?** Asumo que es **de la pareja**, un solo contador en `couples/{id}`, y que basta con que **uno de los dos** haga algo para que el día cuente. Si preferías que hagan falta los dos, cambia bastante el diseño.
+
+**2. ¿Qué zona horaria manda para "00:00"?** Este es el punto más delicado. Ustedes podrían estar en zonas distintas, y el servidor no sabe cuál usar. Mi propuesta: **guardar una zona horaria en la pareja** (la del creador, por defecto `America/Bogota`) y usar esa para todos. Es simple y evita que uno "pierda" la racha por diferencia horaria.
+
+**3. ¿Quién decide que la racha se rompió?** Aquí hay una decisión de arquitectura importante:
+- **Opción A (recomendada): calcularlo al leer.** No hay proceso nocturno. Cada actividad guarda la fecha del día en `streakLog`, y al abrir la app se calcula la racha contando días consecutivos hacia atrás. Nada que "rompa" a medianoche, y no requiere Cloud Functions programadas ni plan de pago.
+- **Opción B: una Cloud Function programada** que a las 00:00 resetea el contador. Más "real", pero necesita plan Blaze, es más frágil y puede fallar sin que lo notes.
+
+Mi voto es la **A**: el `streakLog` es la fuente de verdad y la racha es un cálculo derivado. Además resuelve solo el archivado: el historial de días queda intacto.
+
+**4. ¿Qué pasa con `streakDays`?** Con la opción A dejaría de ser necesario. Lo conservaría como caché opcional, o lo eliminaría del modelo. Dime si prefieres mantenerlo.
+
+**5. ¿El tiempo de vínculo se muestra como días, o como "1 año, 2 meses, 5 días"?** Asumo días para v1 (el perfil ya dice "días juntos").
+
+**6. Sobre "0m tiempo hoy":** en el perfil hay una tarjeta de "tiempo hoy" que sugiere tiempo de uso de la app. Medir eso es un tema aparte y más complejo. ¿Lo reemplazamos por otra cosa (por ejemplo, "racha actual" o "racha máxima") o hay que medir tiempo real de uso?
+
+## Sobre el diseño de referencia
+
+La primera imagen (la de "Chores") me sirve para el estilo de los dots: cada día lleva **el número dentro de una llama** cuando se cumplió, el día actual queda en un recuadro suave, y los futuros van en gris sin llama. Lo adapto a tu paleta dark (llama en `DarkLavenderPrimary`/`DarkLavenderLight` en vez del naranja), sin copiar nada más. La fila actual del Home, con Dom a Sáb, se mantiene, solo cambia lo que hay dentro de cada celda.
+
+## Archivos que necesito
+
+| Archivo | Para qué |
+|---|---|
+| `HomeRepository.kt` | Cómo se lee hoy `streakDays` y cómo se combina con el resto del Home |
+| `HomeViewModel.kt` | El `HomeUiState` que alimenta la fila de racha |
+| `HomeScreen.kt` | Ya lo tengo, no hace falta reenviarlo |
+| `ProfileScreen.kt` | La tarjeta de "días juntos" y "tiempo hoy" |
+| `ProfileViewModel.kt` + `ProfileRepository.kt` | De dónde salen esos datos hoy |
+| `CoupleRepository.kt` | Aquí vive la vinculación/desvinculación, donde hay que archivar |
+| `functions/index.js` | Para ver cómo se crea la pareja y qué hace `redeemInviteCode`, porque ahí debería registrarse el inicio del vínculo |
+| `firestore.rules` | Ya lo tengo (versión que te entregué), no hace falta |
+| `Models.kt` | Ya lo tengo |
+
+Los imprescindibles son `HomeRepository.kt`, `HomeViewModel.kt`, `ProfileScreen.kt`, `CoupleRepository.kt` y `functions/index.js`.
+
+## Un detalle de datos que puede ser un problema
+
+Para "días juntos" necesito **la fecha en que se vincularon**, no la de creación de la pareja. Hoy `couples/{id}` tiene `createdAt`, pero esa es la fecha en que el primer usuario generó la invitación, que puede ser días antes de que el segundo la canjee. Habría que agregar un campo `linkedAt` que escriba `redeemInviteCode` en el momento del canje. Las parejas ya existentes (la tuya de pruebas incluida) no lo tendrán, así que para ellas usaría `createdAt` como respaldo.
+
+Confírmame los puntos 1, 2, 3 y 6, que son los que cambian el diseño, y mándame los archivos.
+1. pues en teoria la racha es de ambos yo diria que por ejemplo en dibujo si o si deben los dos terminar la actividad pero en chat no necesariamente es bilateral entonces se me ocurre que excluyamos a chat para este metodo de racha. Por que en juegos sera bilateral tambien y en imaginar aqui tambien se excluye por que por ejemplo no todos los dias vas a crear algo nuevo una idea un plan o una capsula o lista esto es mas de un dia se me ocurrio algo entonces opino, que racha solo debe ser si el espacio tiene una actividad bilateral
+2. Me parece bien tu solucion igual ambas personas son del mismo horario pero entiendo que si esto escalara podria una persona irse a otro pais y cambia la zona horaria
+3. Opcion A parece ser la mas sencilla
+4. Borrado si vamos a mejorar la idea original asi que no es necesario
+5. Si dias luego veremos si ampliamos
+6. Justamente en perfil hay dos cards la primera de racha esta muestro los dias que lleva la racha y la segunda es el tiempo de vinculacion ya no es mas tiempo de hoy es decir no vamos a cambiar el diseño solo su logica y los datos que ya no seran similados o estaticos
+
+* EL detalle tienes razon debemos hacer que se guarde la fecha de creacion del vinculo y crear un respaldo para mis cuentas de prueba
+Ya te paso los archivos
+Todo claro, y tu punto 1 mejora mucho la idea: que la racha dependa solo de actividades **bilaterales** la hace más significativa. Te confirmo cómo queda para que me digas si algo no coincide antes de que me mandes los archivos.
+
+## Diseño resultante
+
+**Qué cuenta como actividad de racha**
+
+| Módulo | ¿Cuenta? | Cuándo se dispara |
+|---|---|---|
+| Draw | Sí | Cuando la ronda pasa a `revealed` (ambos dibujaron). Es el momento exacto en que ambos completaron |
+| Play | Sí (futuro) | Cuando ambos completen la actividad |
+| Talk | No | Excluido: no es bilateral |
+| Imagine | No | Excluido: es esporádico |
+
+Con esto, el punto de escritura de Draw ya está identificado: la misma transacción `markReadyToReveal` que hoy cambia el estado a `revealed` es donde se registra el día.
+
+**Cómo se calcula (opción A)**
+- `streakLog` guarda los días con actividad como un mapa `"yyyy-MM-dd" -> true`.
+- La racha **no se guarda**: se calcula al leer, contando días consecutivos hacia atrás.
+- Regla de tolerancia: si hoy aún no hay actividad pero ayer sí, **la racha sigue viva** (el día no ha terminado). Solo se pierde cuando pasa un día completo sin actividad. Sin esto, todos los usuarios verían la racha en 0 cada mañana hasta hacer algo.
+- `streakDays` se elimina del modelo.
+
+**Zona horaria:** se guarda `timezone` en la pareja (por defecto `America/Bogota`), y toda la lógica de "qué día es" usa esa zona. Queda en un solo lugar para poder cambiarla si escala.
+
+**Tiempo de vínculo:** nuevo campo `linkedAt` que escribe `redeemInviteCode` en el momento del canje. Las parejas existentes usan `createdAt` como respaldo.
+
+**Perfil:** sin cambio de diseño. La card de racha muestra los días reales y la de vínculo los días desde `linkedAt`.
+
+## Dos cosas que necesito aclarar
+
+**A. La fila semanal, ¿cuenta una racha o marca días sueltos?**
+Son cosas distintas. La racha es "llevan 5 días seguidos"; la fila es "esta semana hicieron algo el lunes, martes y jueves". Con `streakLog` puedo mostrar **ambas** de forma exacta: cada celda de la fila se llena si ese día tiene registro, sin depender del número de racha. Asumo que quieres eso, que sería más correcto que la aproximación actual.
+
+**B. Desvincular y archivar.**
+Dijiste que al desvincularse el registro se archiva. Hoy la Cloud Function `cancelPendingInvite` **se niega a desvincular** si ya hay pareja completa (decisión de producto que quedó pendiente en la sección 8.5). Para archivar necesito saber si el flujo de desvincular **ya existe** en tu app o si es algo que tampoco está construido. El modal de desvinculación del perfil sugiere que sí, pero no sé si llama a algo real. Lo veré en `CoupleRepository.kt` y `index.js`.
+
+## Sobre tus cuentas de prueba (respaldo)
+
+Para las parejas que ya existen, propongo **no tocar Firestore a mano**: el código lee `linkedAt` y, si no existe, usa `createdAt`. Así tus cuentas siguen funcionando sin migración. Si más adelante quieres que muestren la fecha correcta de vínculo, se corrige con una edición puntual de un solo campo.
+
+## Archivos, en orden de prioridad
+
+1. `HomeRepository.kt` y `HomeViewModel.kt`
+2. `ProfileScreen.kt` (y `ProfileViewModel.kt`/`ProfileRepository.kt`)
+3. `CoupleRepository.kt`
+4. `functions/index.js`
+
+Con esos cuatro grupos puedo hacerlo completo. Mándalos cuando quieras, y de paso dime si el punto A (fila semanal basada en `streakLog`, no en el número de racha) es lo que esperas.
+A. correcto
+B. Pues yo decia de guardar registro pero suena a que depende de otras cosas como algo que no contemplo como la desvinculacion aun entonces por ahora meh solo que se resetee no guardes historial. Mas adelante decido si implemento eso.
