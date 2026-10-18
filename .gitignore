@@ -1,3 +1,5 @@
+**/node_modules/
+functions/node_modules/
 local.properties
 keystore.properties
 *.keystore
