@@ -9,11 +9,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
-/**
- * Estado de UI del Home ya traducido a lo que la pantalla necesita
- * pintar. HomeScreen no conoce Firestore ni el repositorio: solo
- * consume este estado.
- */
 data class HomeUiState(
     val isLoading: Boolean = true,
     val streakDays: Int = 0,

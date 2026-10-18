@@ -10,39 +10,17 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.tasks.await
 
-/**
- * Datos de Google disponibles de inmediato tras el login, usados para
- * precargar el formulario de CreateProfileScreen (nombre y foto), tal
- * como describe la seccion 2.5 del documento maestro: "nombre y foto de
- * perfil llegan listos desde la cuenta de Google, pero editables".
- */
 data class GoogleProfileHint(
     val suggestedName: String,
     val suggestedPhotoUrl: String?
 )
 
-/**
- * Perfil minimo (users/{uid}) que necesita la pantalla de Perfil ("me"):
- * mismo shape que HomeUserProfile, pero definido aca para no acoplar el
- * paquete profile al paquete ui.screens.home.
- */
 data class MyProfileData(
     val uid: String,
     val name: String,
     val photoUrl: String?
 )
 
-/**
- * Snapshot combinado que necesita ProfileScreen: mi perfil y el de mi
- * pareja (para la card "Estado de Conexion"). partnerProfile es null si
- * todavia no hay coupleId (no se completo el onboarding de la seccion 2.4).
- *
- * streakDays ya no se lee de Firestore, se calcula (ver StreakCalculator).
- * linkedAtMillis / createdAtMillis alimentan la card de "tiempo de
- * vinculo": linkedAtMillis es null si la pareja se creo antes de que
- * redeemInviteCode empezara a escribir linkedAt, y en ese caso
- * createdAtMillis sirve de respaldo (ver documento maestro).
- */
 data class ProfileFirestoreData(
     val myProfile: MyProfileData?,
     val partnerProfile: MyProfileData?,
@@ -52,27 +30,11 @@ data class ProfileFirestoreData(
     val createdAtMillis: Long? = null
 )
 
-/**
- * Repositorio del perfil propio (users/{uid}). No maneja coupleId: eso es
- * responsabilidad exclusiva de las Cloud Functions
- * createInviteCode/redeemInviteCode (ver CoupleRepository), que corren con
- * Admin SDK y se saltan las reglas de Firestore a proposito para evitar
- * que el cliente falsifique ese campo.
- *
- * observeProfile() sigue el mismo patron que HomeRepository.observeHome():
- * primero escucha users/{uid} propio, y a partir de su coupleId encadena
- * el listener del perfil de la pareja.
- */
 class ProfileRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
 
-    /**
-     * Lee displayName/photoUrl directamente del FirebaseUser (vienen del
-     * proveedor Google, sin necesidad de ninguna llamada extra a Firestore
-     * ni a la API de Google). Nulo si por alguna razon no hay sesion activa.
-     */
     fun getGoogleHint(): GoogleProfileHint? {
         val user = auth.currentUser ?: return null
         return GoogleProfileHint(
@@ -81,15 +43,6 @@ class ProfileRepository(
         )
     }
 
-    /**
-     * Crea (o sobreescribe) el documento users/{uid} con el perfil
-     * completado por la persona. No incluye coupleId en absoluto: las
-     * reglas de Firestore (create de couples/{coupleId}) exigen
-     * myProfile().coupleId == null, y un campo ausente en Firestore se lee
-     * como null en las reglas de seguridad, asi que omitirlo aqui (en vez
-     * de escribir "") es lo correcto. coupleId solo lo escribe despues la
-     * Cloud Function createInviteCode/redeemInviteCode via Admin SDK.
-     */
     suspend fun saveProfile(name: String, photoUrl: String?) {
         val uid = auth.currentUser?.uid
             ?: throw IllegalStateException("No hay sesion activa para guardar el perfil.")
@@ -102,11 +55,6 @@ class ProfileRepository(
             .await()
     }
 
-    /**
-     * Observa mi perfil y, si ya tengo coupleId, el de mi pareja. Usado por
-     * ProfileScreen para la card "Estado de Conexion" y el nombre/foto de
-     * la cabecera. Si no hay sesion activa, emite un unico valor vacio.
-     */
     fun observeProfile(): Flow<ProfileFirestoreData> {
         val uid = auth.currentUser?.uid
             ?: return callbackFlow {

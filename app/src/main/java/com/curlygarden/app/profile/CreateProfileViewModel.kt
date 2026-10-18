@@ -23,8 +23,6 @@ class CreateProfileViewModel(
     val uiState: StateFlow<CreateProfileUiState> = _uiState.asStateFlow()
 
     init {
-        // Precarga nombre y foto desde la cuenta de Google, editables por
-        // la persona antes de guardar (seccion 2.5 del documento maestro).
         repository.getGoogleHint()?.let { hint ->
             _uiState.value = _uiState.value.copy(
                 name = hint.suggestedName,

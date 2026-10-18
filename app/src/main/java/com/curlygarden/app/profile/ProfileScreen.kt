@@ -43,19 +43,6 @@ import com.curlygarden.app.profile.ProfileViewModelFactory
 import com.curlygarden.app.ui.theme.CurlyColors
 import com.curlygarden.app.ui.theme.curlyDarkBackground
 
-/**
- * Pantalla de Perfil ("me"), rediseñada a dark mode (mockup aprobado
- * 19/09/2026): header con back-arrow + logout, nombre y rol arriba del
- * avatar (foto de Google, no editable), card de nivel/racha de juegos
- * (placeholder hasta que exista el sistema de puntos de Play), card de
- * Estado de Conexion en estilo "status row" (icono + titulo + subtitulo,
- * sin avatar de pareja), y dos cards inferiores de dias de racha y tiempo
- * en la app hoy.
- *
- * onEditPhotoClicked/onSettingsClicked ya no se usan (foto viene fija de
- * Google; se elimino la seccion de Ajustes). Se dejan los parametros por
- * compatibilidad de firma pero sin callsite visual.
- */
 @Composable
 fun ProfileScreen(
     onBackClicked: () -> Unit = {},
@@ -222,10 +209,6 @@ private fun NameAndRole(uiState: ProfileUiState) {
     }
 }
 
-/**
- * Avatar de 112dp, foto de Google via Coil. Ya no es editable (se quito el
- * badge de lapiz): la foto viene fija de la cuenta de Google.
- */
 @Composable
 private fun ProfileAvatar(profile: MyProfileData?) {
     Box(
@@ -258,11 +241,6 @@ private fun ProfileAvatar(profile: MyProfileData?) {
     }
 }
 
-/**
- * Card de nivel: reservada para el futuro sistema de puntos de Play
- * (ganar retos/verdad o reto suma puntos y sube de nivel). Placeholder
- * fijo (Lv. 1, 0%) hasta que ese sistema exista.
- */
 @Composable
 private fun LevelProgressCard() {
     Surface(
@@ -327,14 +305,6 @@ private fun LevelProgressCard() {
     }
 }
 
-/**
- * Card "Estado de Conexion" compacta, siguiendo el mockup aprobado
- * (19/09/2026): icono de cadena a la izquierda, titulo "...actual" +
- * subtitulo descriptivo en columna a la derecha, y debajo un boton solido
- * tipo CTA (unico elemento tocable) con el estado real. Al tocarlo: si hay
- * pareja, abre el modal de detalle/desvincular; si no, dispara onClick
- * hacia afuera (ProfileScreen decide navegar al onboarding).
- */
 @Composable
 private fun ConnectionStatusCard(partnerProfile: MyProfileData?, onClick: () -> Unit) {
     val isLinked = partnerProfile != null
@@ -447,12 +417,6 @@ private fun StatCard(
     }
 }
 
-/**
- * Modal de "Estado de Conexion" cuando SI hay pareja vinculada: recoloreado
- * a dark mode (misma logica funcional: doble confirmacion inline antes de
- * desvincular via Cloud Function unlinkCouple; onDismiss bloqueado mientras
- * isUnlinking es true).
- */
 @Composable
 private fun ConnectionStatusDialog(
     partnerProfile: MyProfileData,
@@ -578,11 +542,6 @@ private fun ConnectionStatusDialog(
     )
 }
 
-/**
- * Movida desde HomeScreen (19/09/2026): la racha ahora vive en Perfil y
- * empieza a contar en cuanto el usuario se vincula con alguien (couple
- * creado). Mismo estilo visual, sin cambios.
- */
 @Composable
 private fun StreakPill(streakDays: Int, modifier: Modifier = Modifier) {
     Surface(

@@ -7,11 +7,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** En que paso del flujo de la seccion 2.4 esta la persona ahora mismo. */
 enum class CoupleOnboardingStep {
-    ChooseAction,     // "tienes un codigo o vas a invitar a alguien"
-    ShowingInviteCode,// invito: mostrando su codigo para compartir
-    EnteringCode      // tiene codigo: escribiendolo para canjearlo
+    ChooseAction,
+    ShowingInviteCode,
+    EnteringCode
 }
 
 data class CoupleOnboardingUiState(
@@ -58,9 +57,6 @@ class CoupleOnboardingViewModel(
     }
 
     fun onCodeInputChanged(newCode: String) {
-        // Los codigos se generan en mayusculas sin caracteres ambiguos
-        // (seccion 2.4); se normaliza aqui para que la persona no tenga
-        // que preocuparse por mayusculas al escribir.
         _uiState.value = _uiState.value.copy(
             codeInput = newCode.uppercase(),
             errorMessage = null
@@ -92,7 +88,6 @@ class CoupleOnboardingViewModel(
         }
     }
 
-    /** Vuelve a la pantalla de elegir accion (por ejemplo, boton "atras"). */
     fun onBackToChoose() {
         _uiState.value = _uiState.value.copy(
             step = CoupleOnboardingStep.ChooseAction,

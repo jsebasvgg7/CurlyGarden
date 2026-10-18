@@ -15,16 +15,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/**
- * Estado de UI de la pantalla de Perfil ("me"). ProfileScreen no conoce
- * Firestore ni el repositorio: solo consume este estado, igual que
- * HomeScreen consume HomeUiState.
- *
- * isUnlinking/unlinkError/unlinked son especificos del modal "Estado de
- * Conexion": permiten mostrar progreso mientras corre la Cloud Function
- * unlinkCouple y un mensaje de error si falla, sin mezclar ese estado
- * transitorio con la carga en tiempo real de myProfile/partnerProfile.
- */
 data class ProfileUiState(
     val isLoading: Boolean = true,
     val myProfile: MyProfileData? = null,
@@ -54,10 +44,6 @@ class ProfileViewModel(
     val uiState: StateFlow<ProfileUiState> = combine(
         firestoreState, _unlinkState
     ) { firestoreData, unlink ->
-        // linkedAt es el momento del canje del codigo (lo escribe
-        // redeemInviteCode); las parejas creadas antes de ese cambio no lo
-        // tienen, asi que createdAt sirve de respaldo (ver documento maestro,
-        // seccion Racha / tiempo de vinculo).
         val linkStartMillis = firestoreData.linkedAtMillis ?: firestoreData.createdAtMillis
         val daysLinked = linkStartMillis?.let {
             ChronoUnit.DAYS.between(Instant.ofEpochMilli(it), Instant.now()).toInt()
@@ -79,12 +65,6 @@ class ProfileViewModel(
         initialValue = ProfileUiState(isLoading = true)
     )
 
-    /**
-     * Desvincula la pareja actual (boton "Desvincular" dentro del modal de
-     * "Estado de Conexion"). Al terminar con exito, unlinked=true; la UI
-     * usa eso para cerrar el modal (el listener de observeProfile ya
-     * limpiara partnerProfile solo, en cuanto Firestore refleje el cambio).
-     */
     fun onUnlinkConfirmed() {
         if (_unlinkState.value.isUnlinking) return
 
@@ -109,7 +89,6 @@ class ProfileViewModel(
         _unlinkState.value = _unlinkState.value.copy(error = null)
     }
 
-    /** Se llama despues de que la UI ya reacciono a unlinked=true (cerro el modal). */
     fun onUnlinkHandled() {
         _unlinkState.value = UnlinkState()
     }

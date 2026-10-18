@@ -3,9 +3,6 @@ package com.curlygarden.app.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 
-/**
- * Igual que HomeViewModelFactory: no necesita contexto, solo lee Firestore.
- */
 class ProfileViewModelFactory : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         val repository = ProfileRepository()

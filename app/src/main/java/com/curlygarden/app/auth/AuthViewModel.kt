@@ -7,11 +7,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * Estado de la pantalla de login. `navigateTo` es un evento de una sola vez
- * (se consume y se limpia) para que un recomposition no vuelva a disparar
- * la navegacion.
- */
 data class AuthUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
@@ -19,8 +14,8 @@ data class AuthUiState(
 )
 
 enum class AuthDestination {
-    CreateProfile,   // primera vez: falta nombre/foto en Firestore
-    CoupleOnboarding // ya tiene perfil, falta vincularse o ya tiene pareja -> Home
+    CreateProfile,
+    CoupleOnboarding
 }
 
 class AuthViewModel(
@@ -30,10 +25,6 @@ class AuthViewModel(
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
-    /**
-     * Util para MainActivity: permite saltarse Splash+Login si Firebase ya
-     * tiene una sesion activa de una apertura anterior de la app.
-     */
     fun currentUserExists(): Boolean = repository.currentUser != null
 
     fun onSignInWithGoogleClicked() {
@@ -60,8 +51,6 @@ class AuthViewModel(
                     )
                 }
                 SignInResult.Cancelled -> {
-                    // El usuario cerro el selector de cuentas: no es un error,
-                    // simplemente volvemos al estado inicial sin mensaje.
                     _uiState.value = _uiState.value.copy(isLoading = false)
                 }
             }

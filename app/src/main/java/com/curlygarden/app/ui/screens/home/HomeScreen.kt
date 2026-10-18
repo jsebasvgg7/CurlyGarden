@@ -267,11 +267,6 @@ private fun StreakWeekRow(completedDates: Set<LocalDate>, modifier: Modifier = M
             val isCompleted = date in completedDates
             val isFuture = date.isAfter(today)
 
-            // "Hoy" ya no es un bloque de color aparte (ver observacion
-            // 20/09/2026): se resalta solo con un borde sutil en
-            // DarkLavenderPrimary, y el fondo de la celda sigue el mismo
-            // criterio completado/pendiente que cualquier otro dia. Asi la
-            // gota morada queda como el unico indicador fuerte de "hecho".
             val background = if (isCompleted) CurlyColors.DarkSurfaceElevated else CurlyColors.DarkSurface
             val textColor = when {
                 isCompleted -> Color.White
@@ -299,11 +294,6 @@ private fun StreakWeekRow(completedDates: Set<LocalDate>, modifier: Modifier = M
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(Modifier.height(2.dp))
-                    // Box de tamaño fijo compartido por ambos casos (gota o
-                    // numero suelto): antes cada celda medía lo que su
-                    // propio contenido ocupaba, y la gota (26dp) quedaba
-                    // mas alta que el simple Text (13sp) de los demas dias,
-                    // desalineando toda la fila (ver observacion 20/09/2026).
                     Box(
                         modifier = Modifier.size(26.dp),
                         contentAlignment = Alignment.Center

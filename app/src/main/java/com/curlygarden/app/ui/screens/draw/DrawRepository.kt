@@ -184,11 +184,6 @@ class DrawRepository(
             val snapshot = transaction.get(ref)
             if (!snapshot.exists()) return@runTransaction null
 
-            // Leida junto con el resto (antes de cualquier escritura de esta
-            // transaccion) solo si hace falta: se usa unicamente cuando la
-            // ronda termina en "revealed", pero Firestore exige que todas
-            // las lecturas de la transaccion ocurran antes que las escrituras,
-            // asi que se lee siempre, se use o no.
             val coupleSnapshot = transaction.get(coupleRef)
 
             val existingReady = (snapshot.get("readyToReveal") as? Map<*, *>)
@@ -214,16 +209,9 @@ class DrawRepository(
                 SetOptions.merge()
             )
 
-            // Racha: Draw es una actividad bilateral (ver documento maestro,
-            // seccion Racha), asi que el dia solo cuenta cuando ambos
-            // terminaron, es decir, exactamente cuando bothReady pasa a true.
             if (bothReady) {
                 val timezone = coupleSnapshot.getString("timezone") ?: DEFAULT_TIMEZONE
                 val todayKey = todayKeyFor(timezone)
-                // set+merge (no update) porque streakLog puede no existir
-                // todavia como campo en couples/{coupleId} (parejas que
-                // nunca completaron un Draw); update con dot-notation sobre
-                // un campo mapa inexistente falla en Firestore.
                 transaction.set(
                     coupleRef,
                     mapOf("streakLog" to mapOf(todayKey to true)),
