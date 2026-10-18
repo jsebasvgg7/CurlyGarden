@@ -1,54 +1,106 @@
-# CurlyGarden — proyecto Android
+# CurlyGarden
 
-Base inicial del proyecto, generada a partir del documento maestro de diseno.
+App Android privada para dos personas (pareja, amigos cercanos o familia): un espacio compartido para hablar, dibujar, jugar e imaginar juntos. Interfaz en español, dark mode.
 
-## Como abrir el proyecto
+## Estado de los módulos
 
-1. Abre Android Studio (version reciente, Koala o superior).
-2. `File > Open` y selecciona esta carpeta (`CurlyGarden/`).
-3. Deja que Gradle sincronice. Puede pedir instalar el SDK 34 si no lo tienes.
-4. Ejecuta en un emulador o dispositivo fisico con `Run > Run 'app'`.
+| Módulo | Estado |
+|---|---|
+| Login con Google, perfil y vinculación por código de invitación | Funcional |
+| Home | Funcional, conectado a Firestore |
+| Perfil (estado de conexión, desvincular, racha, días juntos) | Funcional |
+| Talk (muro de cartas, una a la vez) | v1 cerrada |
+| Draw (rondas con temas cruzados y revelado simultáneo) | v1 cerrada |
+| Imagine (Ideas, Listas, Metas, Cápsulas) | Concepto cerrado, sin implementar |
+| Play | Sin implementar |
+| Recuerdos | Sin implementar |
+| Notificaciones push (FCM) | Sin implementar |
 
-Con esto ya deberias ver la app corriendo con datos de ejemplo (mock), sin necesidad de configurar Firebase todavia.
+## Stack
 
-## Que hay ya implementado
+| Capa | Tecnología |
+|---|---|
+| App | Kotlin 1.9.24 + Jetpack Compose (Material 3, BOM 2024.02.02) |
+| Android | minSdk 26, targetSdk y compileSdk 34, JVM 17 |
+| Build | Android Gradle Plugin 8.13.2, Gradle 9.3.0 |
+| Backend | Firebase: Auth, Firestore, Storage, Cloud Functions (Node 20) |
+| Login | Credential Manager + Google Sign-In |
+| Imágenes | Coil |
+| Iconos | Feather + Material Icons Extended |
+| Tipografía | Quicksand, local en `res/font/` |
 
-- Tema visual con la paleta oficial de CurlyGarden (`ui/theme/Theme.kt`)
-- Navegacion inferior de 4 tabs: home, us, memories, me (`ui/navigation/BottomNav.kt`)
-- Pantalla Home funcional con datos de ejemplo (`ui/screens/home/HomeScreen.kt`)
-- Pantalla Talk (chat) funcional con mensajes de ejemplo (`ui/screens/talk/TalkScreen.kt`)
-- Modelos de datos que reflejan 1:1 las colecciones de Firestore (`data/model/Models.kt`)
+## Requisitos
 
-## Que falta (marcado con TODO en el codigo)
+- Android Studio reciente y JDK 17.
+- Un proyecto de Firebase con Authentication (proveedor Google), Firestore y Storage activos.
+- Para las Cloud Functions: Node 20 y Firebase CLI.
 
-- Pantallas Draw, Play, Imagine y Memories (mismo patron que Home/Talk)
-- Conectar Firebase real:
-  1. Crear proyecto en https://console.firebase.google.com
-  2. Descargar `google-services.json` y colocarlo en `app/`
-  3. Activar Authentication (metodo por definir — email, telefono, Google)
-  4. Activar Firestore y aplicar las reglas de seguridad (pendiente de definir en el documento maestro)
-  5. Activar Storage para fotos de perfil y memories
-- Reemplazar los avatares placeholder por imagenes reales (Coil o similar para carga de imagenes)
-- Implementar el flujo de onboarding con codigo de invitacion (ver documento maestro, seccion 2.4)
-- Logica real de dibujo colaborativo en Draw (sincronizacion de trazos via Firestore o Realtime Database)
+## Ejecutar la app
 
-## Estructura de carpetas
+1. Abre la carpeta en Android Studio y deja que Gradle sincronice.
+2. `app/google-services.json` ya está en el repo. Si usas tu propio proyecto de Firebase, reemplázalo y registra el SHA-1 de tu keystore de debug en la app Android de Firebase.
+3. Ejecuta la variante `debug` en un dispositivo o emulador con Google Play Services.
+
+## Build de release
+
+El build de release se firma con un keystore local que no se versiona (`*.keystore` y `keystore.properties` están en `.gitignore`). Crea `keystore.properties` en la raíz con estas claves:
+
+```
+storeFile=ruta/al/keystore
+storePassword=...
+keyAlias=...
+keyPassword=...
+```
+
+Luego:
+
+```
+./gradlew assembleRelease
+```
+
+El SHA-1 de release también debe estar registrado en Firebase para que el login con Google funcione.
+
+## Backend
+
+Todo vive en la raíz del repo:
+
+| Archivo | Contenido |
+|---|---|
+| `firestore.rules` | Reglas de seguridad de Firestore |
+| `firestore.indexes.json` | Índices (hoy vacío, no hacen falta) |
+| `functions/index.js` | Cloud Functions: `createInviteCode`, `redeemInviteCode`, `cancelPendingInvite`, `unlinkCouple` |
+| `firebase.json` | Configuración del CLI |
+
+Despliegue:
+
+```
+firebase deploy --only firestore:rules
+firebase deploy --only functions
+```
+
+Nota: `firebase.json` referencia `storage.rules`, pero ese archivo no está en el repo. Las reglas de Storage hoy se gestionan desde la consola de Firebase.
+
+## Estructura
 
 ```
 app/src/main/java/com/curlygarden/app/
-├─ MainActivity.kt
-├─ ui/
-│  ├─ theme/          -> colores, tipografia, tema Compose
-│  ├─ navigation/      -> bottom nav de 4 tabs
-│  └─ screens/
-│     ├─ home/
-│     ├─ talk/
-│     ├─ draw/         (vacio, pendiente)
-│     ├─ play/         (vacio, pendiente)
-│     ├─ imagine/      (vacio, pendiente)
-│     └─ memories/     (vacio, pendiente)
-└─ data/
-   └─ model/          -> data classes que reflejan Firestore
+├── MainActivity.kt
+├── auth/              login con Google y Credential Manager
+├── couple/            onboarding: crear y canjear código de invitación
+├── profile/           perfil propio y estado de conexión
+├── startup/           decide la pantalla inicial según Firestore
+├── data/streak/       cálculo de la racha a partir de streakLog
+└── ui/
+    ├── theme/         colores, tipografía y tema Compose
+    └── screens/
+        ├── auth/      Splash y Login
+        ├── couple/    CoupleOnboardingScreen
+        ├── draw/      Draw: tema, canvas, revelado e historial
+        ├── home/      Home y su repositorio
+        ├── profile/   CreateProfileScreen
+        └── talk/      Talk: carta actual, redactar e historial
 ```
 
-Referencia completa de diseno, colores, modelo de datos y decisiones: ver `CurlyGarden_Documentacion.md`.
+## Documentación
+
+El diseño, el modelo de datos de Firestore y el historial de decisiones están en `CurlyGardenDoc.md`, un documento maestro que se mantiene fuera del repo (está en `.gitignore`).
