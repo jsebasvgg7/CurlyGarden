@@ -3,8 +3,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helpers ---
-
     function isSignedIn() {
       return request.auth != null;
     }
@@ -13,31 +11,21 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // El perfil del usuario que hace la peticion (users/{uid}).
     function myProfile() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Verdadero si el usuario autenticado pertenece a esta pareja,
-    // segun el coupleId guardado en su propio perfil (users/{uid}.coupleId).
     function belongsToCouple(coupleId) {
       return isSignedIn()
         && myProfile().coupleId == coupleId;
     }
 
-    // Verdadero si el perfil ajeno pertenece a la misma pareja que yo.
-    // Permite que cada quien lea nombre y foto de su companero.
     function sharesCoupleWith(otherUser) {
       return isSignedIn()
         && myProfile().get('coupleId', null) != null
         && otherUser.get('coupleId', null) == myProfile().get('coupleId', null);
     }
 
-    // --- users/{userId} ---
-    // Cada quien lee y escribe unicamente su propio perfil.
-    // No se permite que un usuario cambie su propio coupleId directamente
-    // (eso solo lo hace la Cloud Function redeemInviteCode con Admin SDK,
-    // que se salta estas reglas).
     match /users/{userId} {
       allow read: if isMe(userId) || sharesCoupleWith(resource.data);
       allow create: if isMe(userId);
@@ -46,36 +34,22 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // --- couples/{coupleId} ---
     match /couples/{coupleId} {
       allow read: if belongsToCouple(coupleId);
 
-      // Crear una pareja: el creador se coloca como user1Id,
-      // user2Id queda vacio, y aun no debe tener coupleId asignado.
       allow create: if isSignedIn()
         && request.resource.data.user1Id == request.auth.uid
         && request.resource.data.user2Id == ""
         && myProfile().coupleId == null;
 
-      // Nada se actualiza desde el cliente directamente salvo streakLog:
-      // vincular user2Id, timezone y linkedAt pasan por las Cloud Functions
-      // createInviteCode/redeemInviteCode (Admin SDK, se saltan estas reglas).
-      // streakLog es la unica excepcion: DrawRepository.markReadyToReveal
-      // necesita escribir el dia de hoy en el momento exacto en que ambos
-      // terminan una ronda de Draw (ver seccion "Racha" del documento maestro).
       allow update: if belongsToCouple(coupleId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['streakLog'])
         && request.resource.data.streakLog is map;
       allow delete: if false;
 
-      // --- Subcolecciones: mismo criterio de pertenencia a la pareja ---
-
       match /messages/{messageId} {
         allow read: if belongsToCouple(coupleId);
 
-        // Crear: solo como uno mismo, texto de 1 a 140 caracteres,
-        // sin marcar como visto, y con solo los campos esperados.
-        // replyTo y replyPreview son opcionales.
         allow create: if belongsToCouple(coupleId)
           && request.resource.data.senderId == request.auth.uid
           && request.resource.data.text is string
@@ -90,9 +64,6 @@ service cloud.firestore {
               || (request.resource.data.replyPreview is string
                   && request.resource.data.replyPreview.size() <= 60));
 
-        // Actualizar: unicamente el campo "seen", pasando de false a true,
-        // y solo lo puede hacer quien NO escribio el mensaje.
-        // Asi nadie puede editar el texto de un mensaje ya enviado.
         allow update: if belongsToCouple(coupleId)
           && resource.data.senderId != request.auth.uid
           && resource.data.seen == false
@@ -102,7 +73,6 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // Draw: ronda activa (un canvas por usuario) e historial de rondas terminadas.
       match /drawRound/{roundId} {
         allow read, write: if belongsToCouple(coupleId);
 
@@ -146,11 +116,6 @@ service cloud.firestore {
       }
     }
 
-    // --- inviteCodes/{code} ---
-    // Sin escritura desde el cliente en absoluto: se crean y se marcan
-    // como usados solo por Cloud Functions (Admin SDK, se saltan estas reglas).
-    // Se permite lectura minima para que el usuario que invita pueda
-    // ver el estado de su propio codigo si lo necesita en la UI.
     match /inviteCodes/{code} {
       allow read: if isSignedIn() && resource.data.createdBy == request.auth.uid;
       allow write: if false;
