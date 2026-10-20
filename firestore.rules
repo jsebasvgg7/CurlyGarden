@@ -26,6 +26,97 @@ service cloud.firestore {
         && otherUser.get('coupleId', null) == myProfile().get('coupleId', null);
     }
 
+    function isCreator(data) {
+      return data.createdBy == request.auth.uid;
+    }
+
+    function canEditShared(data) {
+      return isCreator(data)
+        || (request.auth.uid in data.sharedWith && data.locked == false);
+    }
+
+    function onlyChanges(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    function isJoin() {
+      return !isCreator(resource.data)
+        && resource.data.sharedWith.size() == 0
+        && resource.data.locked == false
+        && onlyChanges(['sharedWith'])
+        && request.resource.data.sharedWith == [request.auth.uid];
+    }
+
+    function isLockToggle() {
+      return isCreator(resource.data)
+        && onlyChanges(['locked'])
+        && request.resource.data.locked is bool;
+    }
+
+    function isLikeToggle() {
+      let added = request.resource.data.likedBy.toSet().difference(resource.data.likedBy.toSet());
+      let removed = resource.data.likedBy.toSet().difference(request.resource.data.likedBy.toSet());
+      return onlyChanges(['likedBy'])
+        && request.resource.data.likedBy is list
+        && ((added.hasOnly([request.auth.uid]) && removed.size() == 0)
+            || (removed.hasOnly([request.auth.uid]) && added.size() == 0));
+    }
+
+    function validTitle(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 80;
+    }
+
+    function validAttachment(data) {
+      return !('attachmentUrl' in data)
+        || (data.attachmentUrl is string && data.get('attachmentType', '') in ['image', 'file']);
+    }
+
+    function validIdea(data) {
+      return validTitle(data)
+        && data.content is string
+        && data.content.size() > 0
+        && data.content.size() <= 1000
+        && validAttachment(data);
+    }
+
+    function validList(data) {
+      return validTitle(data)
+        && data.items is list
+        && data.items.size() <= 100
+        && data.status in ['activa', 'finalizada'];
+    }
+
+    function validGoal(data) {
+      return validTitle(data)
+        && data.content is string
+        && data.content.size() <= 500
+        && data.targetDateText is string
+        && data.targetDateText.size() > 0
+        && data.targetDateText.size() <= 60
+        && data.status in ['activa', 'finalizada'];
+    }
+
+    function newSharedBase(data) {
+      return isCreator(data)
+        && data.sharedWith == []
+        && data.locked == false
+        && data.likedBy == []
+        && data.createdAt == request.time;
+    }
+
+    function capsulePath(coupleId, capsuleId) {
+      return /databases/$(database)/documents/couples/$(coupleId)/imagineCapsules/$(capsuleId);
+    }
+
+    function isContribution(coupleId, capsuleId) {
+      return resource.data.mode == 'shared'
+        && request.time < resource.data.unlockDate
+        && !(request.auth.uid in resource.data.contributors)
+        && onlyChanges(['contributors'])
+        && request.resource.data.contributors == resource.data.contributors.concat([request.auth.uid])
+        && existsAfter(/databases/$(database)/documents/couples/$(coupleId)/imagineCapsules/$(capsuleId)/entries/$(request.auth.uid));
+    }
+
     match /users/{userId} {
       allow read: if isMe(userId) || sharesCoupleWith(resource.data);
       allow create: if isMe(userId);
@@ -96,11 +187,116 @@ service cloud.firestore {
         allow write: if belongsToCouple(coupleId);
       }
 
-      match /ideas/{ideaId} {
+      match /imagineIdeas/{entryId} {
         allow read: if belongsToCouple(coupleId);
+
         allow create: if belongsToCouple(coupleId)
-          && request.resource.data.createdBy == request.auth.uid;
-        allow update, delete: if belongsToCouple(coupleId);
+          && request.resource.data.keys().hasOnly(
+               ['title', 'content', 'createdBy', 'sharedWith', 'locked', 'likedBy',
+                'attachmentUrl', 'attachmentType', 'createdAt']
+             )
+          && newSharedBase(request.resource.data)
+          && validIdea(request.resource.data);
+
+        allow update: if belongsToCouple(coupleId)
+          && (isJoin()
+              || isLockToggle()
+              || isLikeToggle()
+              || (canEditShared(resource.data)
+                  && onlyChanges(['title', 'content', 'attachmentUrl', 'attachmentType'])
+                  && validIdea(request.resource.data)));
+
+        allow delete: if belongsToCouple(coupleId) && isCreator(resource.data);
+      }
+
+      match /imagineLists/{entryId} {
+        allow read: if belongsToCouple(coupleId);
+
+        allow create: if belongsToCouple(coupleId)
+          && request.resource.data.keys().hasOnly(
+               ['title', 'items', 'createdBy', 'sharedWith', 'locked', 'likedBy',
+                'status', 'createdAt']
+             )
+          && newSharedBase(request.resource.data)
+          && request.resource.data.status == 'activa'
+          && validList(request.resource.data);
+
+        allow update: if belongsToCouple(coupleId)
+          && (isJoin()
+              || isLockToggle()
+              || isLikeToggle()
+              || (canEditShared(resource.data)
+                  && onlyChanges(['title', 'items', 'status'])
+                  && validList(request.resource.data)));
+
+        allow delete: if belongsToCouple(coupleId) && isCreator(resource.data);
+      }
+
+      match /imagineGoals/{entryId} {
+        allow read: if belongsToCouple(coupleId);
+
+        allow create: if belongsToCouple(coupleId)
+          && request.resource.data.keys().hasOnly(
+               ['title', 'content', 'targetDateText', 'createdBy', 'sharedWith',
+                'locked', 'likedBy', 'status', 'createdAt']
+             )
+          && newSharedBase(request.resource.data)
+          && request.resource.data.status == 'activa'
+          && validGoal(request.resource.data);
+
+        allow update: if belongsToCouple(coupleId)
+          && (isJoin()
+              || isLockToggle()
+              || isLikeToggle()
+              || (canEditShared(resource.data)
+                  && onlyChanges(['title', 'content', 'targetDateText', 'status'])
+                  && validGoal(request.resource.data)));
+
+        allow delete: if belongsToCouple(coupleId) && isCreator(resource.data);
+      }
+
+      match /imagineCapsules/{capsuleId} {
+        allow read: if belongsToCouple(coupleId);
+
+        allow create: if belongsToCouple(coupleId)
+          && request.resource.data.keys().hasOnly(
+               ['title', 'mode', 'unlockDate', 'contributors', 'createdBy', 'likedBy', 'createdAt']
+             )
+          && validTitle(request.resource.data)
+          && request.resource.data.mode in ['individual', 'shared']
+          && request.resource.data.unlockDate is timestamp
+          && request.resource.data.unlockDate > request.time
+          && isCreator(request.resource.data)
+          && request.resource.data.contributors == [request.auth.uid]
+          && request.resource.data.likedBy == []
+          && request.resource.data.createdAt == request.time
+          && existsAfter(/databases/$(database)/documents/couples/$(coupleId)/imagineCapsules/$(capsuleId)/entries/$(request.auth.uid));
+
+        allow update: if belongsToCouple(coupleId)
+          && (isLikeToggle() || isContribution(coupleId, capsuleId));
+
+        allow delete: if false;
+
+        match /entries/{authorId} {
+          allow read: if belongsToCouple(coupleId)
+            && (authorId == request.auth.uid
+                || request.time >= get(capsulePath(coupleId, capsuleId)).data.unlockDate);
+
+          allow create: if belongsToCouple(coupleId)
+            && authorId == request.auth.uid
+            && request.auth.uid in getAfter(capsulePath(coupleId, capsuleId)).data.contributors
+            && request.time < getAfter(capsulePath(coupleId, capsuleId)).data.unlockDate
+            && request.resource.data.keys().hasOnly(
+                 ['text', 'attachmentUrl', 'attachmentType', 'createdAt']
+               )
+            && request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 1000
+            && request.resource.data.createdAt == request.time
+            && validAttachment(request.resource.data);
+
+          allow update, delete: if false;
+        }
       }
 
       match /memories/{memoryId} {

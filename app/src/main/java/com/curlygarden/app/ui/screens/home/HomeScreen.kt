@@ -590,14 +590,14 @@ private fun ImagineSpaceCard(onClick: () -> Unit, modifier: Modifier = Modifier)
                 )
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    "Imaginar",
+                    "Imagina",
                     color = textDark,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp
                 )
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    "Ideas, sueños\ny planes.",
+                    "Ideas que\nconstruimos\njuntos.",
                     color = textDark.copy(alpha = 0.75f),
                     fontSize = 10.sp,
                     lineHeight = 12.sp
