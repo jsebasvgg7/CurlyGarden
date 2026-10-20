@@ -3,6 +3,7 @@ package com.curlygarden.app.ui.screens.imagine
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,12 +22,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.curlygarden.app.ui.theme.CurlyColors
 import compose.icons.FeatherIcons
 import compose.icons.feathericons.Calendar
 import compose.icons.feathericons.Check
+
+private val ListDoneColor = Color(0xFF22C55E)
 
 @Composable
 fun IdeaCardContent(
@@ -131,4 +135,73 @@ fun ListCardContent(
     onToggleItem: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        if (list.items.isEmpty()) {
+            Text(
+                text = "Esta lista todavía no tiene ítems",
+                color = CurlyColors.DarkTextMuted,
+                fontSize = 13.sp
+            )
+        } else {
+            Text(
+                text = "${list.items.count { it.done }} de ${list.items.size} listos",
+                color = CurlyColors.DarkLavenderLight,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
+            )
+            list.items.forEachIndexed { index, item ->
+                ListItemRow(
+                    item = item,
+                    enabled = canEdit,
+                    onClick = { onToggleItem(index) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ListItemRow(
+    item: ListItem,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    val borderColor = if (item.done) ListDoneColor else CurlyColors.DarkLavenderLight
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(vertical = 2.dp)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(20.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .border(1.5.dp, borderColor, RoundedCornerShape(6.dp))
+        ) {
+            if (item.done) {
+                Icon(
+                    FeatherIcons.Check,
+                    contentDescription = null,
+                    tint = ListDoneColor,
+                    modifier = Modifier.size(13.dp)
+                )
+            }
+        }
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = item.text,
+            color = if (item.done) CurlyColors.DarkTextSecondary else CurlyColors.DarkTextPrimary,
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            textDecoration = if (item.done) TextDecoration.LineThrough else TextDecoration.None,
+            modifier = Modifier.weight(1f)
+        )
+    }
 }

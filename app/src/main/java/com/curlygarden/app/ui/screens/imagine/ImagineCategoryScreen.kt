@@ -69,6 +69,14 @@ fun ImagineCategoryScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
     val uriHandler = LocalUriHandler.current
     var composer by remember { mutableStateOf<ImagineComposerTarget?>(null) }
+    var revealedId by remember { mutableStateOf<String?>(null) }
+    val capsule = current as? ImagineCapsule
+    val myUid = state.session?.myUid
+    LaunchedEffect(capsule?.id, capsule?.contributors?.size, myUid) {
+        if (capsule != null && myUid != null && (capsule.isUnlocked() || myUid in capsule.contributors)) {
+            viewModel.loadCapsuleEntries(capsule)
+        }
+    }
     val openAttachment: (String) -> Unit = { url -> runCatching { uriHandler.openUri(url) } }
 
     TalkBackground {
@@ -81,20 +89,20 @@ fun ImagineCategoryScreen(
         ) {
             CategoryHeader(category = category, onBack = onBack)
             Spacer(Modifier.height(18.dp))
-            ImagineFilterTabs(
-                category = category,
-                statusFilter = state.statusFilter,
-                shareFilter = state.shareFilter,
-                onStatusChange = viewModel::setStatusFilter,
-                onShareChange = viewModel::setShareFilter
-            )
-            Spacer(Modifier.height(16.dp))
-
-            Box(
+            Column(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth()
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.Center
             ) {
+                ImagineFilterTabs(
+                    category = category,
+                    statusFilter = state.statusFilter,
+                    shareFilter = state.shareFilter,
+                    onStatusChange = viewModel::setStatusFilter,
+                    onShareChange = viewModel::setShareFilter
+                )
+                Spacer(Modifier.height(16.dp))
                 if (current == null) {
                     EmptyCategory(
                         category = category,
@@ -104,14 +112,16 @@ fun ImagineCategoryScreen(
                     AnimatedContent(
                         targetState = current.id,
                         transitionSpec = { fadeIn() togetherWith fadeOut() },
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .fillMaxWidth(),
                         label = "imagine-card"
                     ) { id ->
                         val item = state.visibleItems.firstOrNull { it.id == id }
                         if (item != null) {
                             Column(
                                 modifier = Modifier
-                                    .fillMaxSize()
+                                    .fillMaxWidth()
                                     .verticalScroll(rememberScrollState())
                             ) {
                                 CategoryCard(
@@ -119,6 +129,10 @@ fun ImagineCategoryScreen(
                                     state = state,
                                     viewModel = viewModel,
                                     onEdit = { composer = ImagineComposerTarget.Edit(it) },
+                                    onOpenCapsule = {
+                                        revealedId = it.id
+                                        viewModel.loadCapsuleEntries(it)
+                                    },
                                     onOpenAttachment = openAttachment
                                 )
                             }
@@ -151,6 +165,19 @@ fun ImagineCategoryScreen(
                 state = state,
                 viewModel = viewModel,
                 onDismiss = { composer = null }
+            )
+        }
+
+        val revealed = revealedId?.let { id -> state.data.capsules.firstOrNull { it.id == id } }
+        val session = state.session
+        if (revealed != null && session != null) {
+            CapsuleRevealDialog(
+                capsule = revealed,
+                entries = state.capsuleEntries[revealed.id],
+                myProfile = session.myProfile,
+                partnerProfile = session.partnerProfile,
+                onOpenAttachment = openAttachment,
+                onDismiss = { revealedId = null }
             )
         }
 
@@ -202,7 +229,9 @@ private fun CategoryHeader(category: ImagineCategory, onBack: () -> Unit) {
 @Composable
 private fun EmptyCategory(category: ImagineCategory, hasAny: Boolean) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 40.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -238,6 +267,7 @@ private fun CategoryCard(
     state: ImagineUiState,
     viewModel: ImagineViewModel,
     onEdit: (ImagineShareable) -> Unit,
+    onOpenCapsule: (ImagineCapsule) -> Unit,
     onOpenAttachment: (String) -> Unit
 ) {
     val session = state.session ?: return
@@ -283,6 +313,17 @@ private fun CategoryCard(
             } else {
                 listOfNotNull(state.profileFor(item.createdBy))
             }
+            val unlocked = item.isUnlocked()
+            val trailing: (@Composable () -> Unit)? = if (unlocked) {
+                {
+                    ImagineCapsuleOpenButton(
+                        shared = item.mode == CapsuleMode.SHARED,
+                        onClick = { onOpenCapsule(item) }
+                    )
+                }
+            } else {
+                null
+            }
             ImagineCardFrame(
                 item = item,
                 myUid = session.myUid,
@@ -292,9 +333,19 @@ private fun CategoryCard(
                 showLock = false,
                 onAction = {},
                 onLike = { viewModel.toggleLike(item) },
-                onLock = {}
+                onLock = {},
+                trailing = trailing
             ) {
-                CapsuleSealedContent(capsule = item)
+                if (unlocked) {
+                    CapsuleReadyContent(capsule = item)
+                } else {
+                    CapsuleSealedContent(
+                        capsule = item,
+                        myUid = session.myUid,
+                        myEntry = state.capsuleEntries[item.id]?.mine,
+                        onOpenAttachment = onOpenAttachment
+                    )
+                }
             }
         }
         else -> Unit

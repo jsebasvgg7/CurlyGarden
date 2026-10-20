@@ -38,6 +38,7 @@ import compose.icons.feathericons.Camera
 import compose.icons.feathericons.Edit2
 import compose.icons.feathericons.Heart
 import compose.icons.feathericons.Lock
+import compose.icons.feathericons.Maximize2
 import compose.icons.feathericons.Unlock
 
 private val ActiveBadgeColor = Color(0xFF22C55E)
@@ -127,12 +128,13 @@ private fun StatusBadge(label: String) {
     Box(
         modifier = Modifier
             .background(color, RoundedCornerShape(50))
-            .padding(horizontal = 9.dp, vertical = 2.dp)
+            .padding(horizontal = 9.dp, vertical = 3.dp)
     ) {
         Text(
             text = label,
             color = Color.White,
             fontSize = 10.sp,
+            lineHeight = 12.sp,
             fontWeight = FontWeight.SemiBold
         )
     }
@@ -149,8 +151,8 @@ fun ImagineAuthorship(
             authors.take(2).forEachIndexed { index, profile ->
                 ImagineAvatar(
                     profile = profile,
-                    size = 34.dp,
-                    modifier = Modifier.padding(start = (index * 22).dp)
+                    size = 46.dp,
+                    modifier = Modifier.padding(start = (index * 30).dp)
                 )
             }
         }
@@ -159,7 +161,8 @@ fun ImagineAuthorship(
             Text(
                 text = if (shared) "Compartida" else "Publicado por",
                 color = CurlyColors.DarkTextSecondary,
-                fontSize = 11.sp
+                fontSize = 12.sp,
+                lineHeight = 14.sp
             )
             Text(
                 text = authors
@@ -167,7 +170,8 @@ fun ImagineAuthorship(
                     .filter { it.isNotBlank() }
                     .joinToString(" & "),
                 color = CurlyColors.DarkTextPrimary,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
+                lineHeight = 15.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -177,7 +181,7 @@ fun ImagineAuthorship(
 }
 
 @Composable
-private fun ImagineAvatar(
+internal fun ImagineAvatar(
     profile: ImagineProfile,
     size: Dp,
     modifier: Modifier = Modifier
@@ -243,6 +247,33 @@ fun ImagineActionButton(
 }
 
 @Composable
+fun ImagineCapsuleOpenButton(
+    shared: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (shared) {
+        Surface(
+            onClick = onClick,
+            shape = CircleShape,
+            color = CurlyColors.DarkLavenderPrimary,
+            modifier = modifier.size(34.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    FeatherIcons.Maximize2,
+                    contentDescription = "abrir",
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    } else {
+        ActionPill(label = "Abrir", onClick = onClick, modifier = modifier)
+    }
+}
+
+@Composable
 private fun ActionPill(
     label: String,
     onClick: () -> Unit,
@@ -258,8 +289,9 @@ private fun ActionPill(
             text = label,
             color = Color.White,
             fontSize = 12.sp,
+            lineHeight = 14.sp,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
     }
 }
