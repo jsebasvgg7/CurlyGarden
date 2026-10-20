@@ -51,21 +51,21 @@ private val CapsulesColor = Color(0xFFD97706)
 private val GoalsColor = Color(0xFFEF2B2B)
 private val IdeasColor = Color(0xFF8E7FE8)
 
-private fun ImagineCategory.label(): String = when (this) {
+internal fun ImagineCategory.label(): String = when (this) {
     ImagineCategory.LISTS -> "Listas"
     ImagineCategory.CAPSULES -> "Cápsulas"
     ImagineCategory.GOALS -> "Metas"
     ImagineCategory.IDEAS -> "Ideas"
 }
 
-private fun ImagineCategory.color(): Color = when (this) {
+internal fun ImagineCategory.color(): Color = when (this) {
     ImagineCategory.LISTS -> ListsColor
     ImagineCategory.CAPSULES -> CapsulesColor
     ImagineCategory.GOALS -> GoalsColor
     ImagineCategory.IDEAS -> IdeasColor
 }
 
-private fun ImagineCategory.icon(): ImageVector = when (this) {
+internal fun ImagineCategory.icon(): ImageVector = when (this) {
     ImagineCategory.LISTS -> FeatherIcons.CheckCircle
     ImagineCategory.CAPSULES -> FeatherIcons.Inbox
     ImagineCategory.GOALS -> FeatherIcons.MapPin
@@ -90,9 +90,10 @@ fun ImagineScreen(onBack: () -> Unit = {}) {
             onSelect = viewModel::selectCategory
         )
     } else {
-        ImagineCategoryPlaceholder(
+        ImagineCategoryScreen(
             category = category,
-            count = state.data.countFor(category),
+            state = state,
+            viewModel = viewModel,
             onBack = { viewModel.selectCategory(null) }
         )
     }
@@ -256,7 +257,7 @@ private fun CategoryCard(
 }
 
 @Composable
-private fun CategoryBadge(category: ImagineCategory, size: Dp) {
+internal fun CategoryBadge(category: ImagineCategory, size: Dp) {
     Surface(
         shape = CircleShape,
         color = category.color(),
@@ -269,68 +270,6 @@ private fun CategoryBadge(category: ImagineCategory, size: Dp) {
                 tint = Color.White,
                 modifier = Modifier.size(size * 0.5f)
             )
-        }
-    }
-}
-
-@Composable
-private fun ImagineCategoryPlaceholder(
-    category: ImagineCategory,
-    count: Int,
-    onBack: () -> Unit
-) {
-    TalkBackground {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TalkCircleButton(onClick = onBack) {
-                    Icon(
-                        FeatherIcons.ArrowLeft,
-                        contentDescription = "atras",
-                        tint = CurlyColors.DarkTextPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                Text(
-                    category.label(),
-                    color = CurlyColors.DarkTextPrimary,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                CategoryBadge(category = category, size = 44.dp)
-            }
-
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                CategoryBadge(category = category, size = 72.dp)
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    elementsLabel(count),
-                    color = CurlyColors.DarkTextPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "Esta pantalla llega pronto.",
-                    color = CurlyColors.DarkTextSecondary,
-                    fontSize = 13.sp
-                )
-            }
         }
     }
 }
