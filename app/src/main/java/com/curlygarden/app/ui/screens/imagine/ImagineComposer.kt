@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,79 +65,132 @@ fun ImagineComposer(
 ) {
     val error by viewModel.errorMessage.collectAsState()
     val myUid = state.session?.myUid
-    val created: () -> Unit = {
-        viewModel.goLatest()
+    val locked = state.isWorking
+    val close: () -> Unit = {
+        viewModel.dismissError()
         onDismiss()
     }
+    val created: () -> Unit = {
+        viewModel.goLatest()
+        close()
+    }
+
+    LaunchedEffect(target) { viewModel.dismissError() }
 
     when (target) {
         is ImagineComposerTarget.Create -> when (target.category) {
-            ImagineCategory.IDEAS -> ComposerShell("Nueva idea", error, onDismiss) {
+            ImagineCategory.IDEAS -> ComposerShell("Nueva idea", error, locked, close) {
                 ImagineIdeaForm(
                     initial = null,
                     isWorking = state.isWorking,
                     onSubmit = { title, content, attachment, _ ->
                         viewModel.createIdea(title, content, attachment, created)
                     },
-                    onDismiss = onDismiss,
+                    onDismiss = close,
                     onDelete = null
                 )
             }
-            ImagineCategory.GOALS -> ComposerShell("Nueva meta", error, onDismiss) {
+            ImagineCategory.GOALS -> ComposerShell("Nueva meta", error, locked, close) {
                 ImagineGoalForm(
                     initial = null,
                     isWorking = state.isWorking,
                     onSubmit = { title, content, date ->
                         viewModel.createGoal(title, content, date, created)
                     },
-                    onDismiss = onDismiss,
+                    onDismiss = close,
                     onDelete = null
                 )
             }
-            ImagineCategory.LISTS -> ComposerShell("Nueva lista", error, onDismiss) { NotAvailableYet() }
-            ImagineCategory.CAPSULES -> ComposerShell("Nueva cápsula", error, onDismiss) { NotAvailableYet() }
+            ImagineCategory.LISTS -> ComposerShell("Nueva lista", error, locked, close) {
+                ImagineListForm(
+                    initial = null,
+                    isWorking = state.isWorking,
+                    onSubmit = { title, items ->
+                        viewModel.createList(title, items, created)
+                    },
+                    onDismiss = close,
+                    onDelete = null
+                )
+            }
+            ImagineCategory.CAPSULES -> ComposerShell("Nueva cápsula", error, locked, close) {
+                ImagineCapsuleCreateForm(
+                    canShare = state.session?.partnerUid != null,
+                    isWorking = state.isWorking,
+                    onSubmit = { title, mode, unlockDate, text, attachment ->
+                        viewModel.createCapsule(title, mode, unlockDate, text, attachment, created)
+                    },
+                    onDismiss = close
+                )
+            }
         }
         is ImagineComposerTarget.Edit -> when (val item = target.item) {
-            is ImagineIdea -> ComposerShell("Editar idea", error, onDismiss) {
+            is ImagineIdea -> ComposerShell("Editar idea", error, locked, close) {
                 ImagineIdeaForm(
                     initial = item,
                     isWorking = state.isWorking,
                     onSubmit = { title, content, attachment, remove ->
-                        viewModel.updateIdea(item, title, content, attachment, remove, onDismiss)
+                        viewModel.updateIdea(item, title, content, attachment, remove, close)
                     },
-                    onDismiss = onDismiss,
+                    onDismiss = close,
                     onDelete = if (item.createdBy == myUid) {
                         {
                             viewModel.delete(item)
-                            onDismiss()
+                            close()
                         }
                     } else {
                         null
                     }
                 )
             }
-            is ImagineGoal -> ComposerShell("Editar meta", error, onDismiss) {
+            is ImagineGoal -> ComposerShell("Editar meta", error, locked, close) {
                 ImagineGoalForm(
                     initial = item,
                     isWorking = state.isWorking,
                     onSubmit = { title, content, date ->
-                        viewModel.updateGoal(item, title, content, date, onDismiss)
+                        viewModel.updateGoal(item, title, content, date, close)
                     },
-                    onDismiss = onDismiss,
+                    onDismiss = close,
                     onDelete = if (item.createdBy == myUid) {
                         {
                             viewModel.delete(item)
-                            onDismiss()
+                            close()
                         }
                     } else {
                         null
                     }
                 )
             }
-            else -> ComposerShell("Editar lista", error, onDismiss) { NotAvailableYet() }
+            is ImagineList -> ComposerShell("Editar lista", error, locked, close) {
+                ImagineListForm(
+                    initial = item,
+                    isWorking = state.isWorking,
+                    onSubmit = { title, items ->
+                        viewModel.updateList(item, title, items, close)
+                    },
+                    onDismiss = close,
+                    onDelete = if (item.createdBy == myUid) {
+                        {
+                            viewModel.delete(item)
+                            close()
+                        }
+                    } else {
+                        null
+                    }
+                )
+            }
+            else -> Unit
         }
         is ImagineComposerTarget.Contribute ->
-            ComposerShell("Aportar a la cápsula", error, onDismiss) { NotAvailableYet() }
+            ComposerShell("Aportar a la cápsula", error, locked, close) {
+                ImagineCapsuleContributeForm(
+                    capsule = target.capsule,
+                    isWorking = state.isWorking,
+                    onSubmit = { text, attachment ->
+                        viewModel.contributeToCapsule(target.capsule, text, attachment, close)
+                    },
+                    onDismiss = close
+                )
+            }
     }
 }
 
@@ -144,11 +198,12 @@ fun ImagineComposer(
 private fun ComposerShell(
     title: String,
     error: String?,
+    locked: Boolean,
     onDismiss: () -> Unit,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!locked) onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Box(
@@ -156,6 +211,7 @@ private fun ComposerShell(
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.62f))
                 .clickable(
+                    enabled = !locked,
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = onDismiss
@@ -188,7 +244,7 @@ private fun ComposerShell(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    TalkCircleButton(onClick = onDismiss, size = 34.dp) {
+                    TalkCircleButton(onClick = onDismiss, enabled = !locked, size = 34.dp) {
                         Icon(
                             Icons.Outlined.Close,
                             contentDescription = "cerrar",
@@ -212,15 +268,6 @@ private fun ComposerShell(
             }
         }
     }
-}
-
-@Composable
-private fun NotAvailableYet() {
-    Text(
-        text = "Todavía no disponible",
-        color = CurlyColors.DarkTextMuted,
-        fontSize = 13.sp
-    )
 }
 
 @Composable
@@ -251,17 +298,20 @@ internal fun ImagineField(
         maxLines = maxLines,
         shape = RoundedCornerShape(18.dp),
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = CurlyColors.DarkSurface,
-            unfocusedContainerColor = CurlyColors.DarkSurface,
-            focusedTextColor = CurlyColors.DarkTextPrimary,
-            unfocusedTextColor = CurlyColors.DarkTextPrimary,
-            cursorColor = CurlyColors.DarkLavenderPrimary,
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent
-        )
+        colors = imagineFieldColors()
     )
 }
+
+@Composable
+internal fun imagineFieldColors() = TextFieldDefaults.colors(
+    focusedContainerColor = CurlyColors.DarkSurface,
+    unfocusedContainerColor = CurlyColors.DarkSurface,
+    focusedTextColor = CurlyColors.DarkTextPrimary,
+    unfocusedTextColor = CurlyColors.DarkTextPrimary,
+    cursorColor = CurlyColors.DarkLavenderPrimary,
+    focusedIndicatorColor = Color.Transparent,
+    unfocusedIndicatorColor = Color.Transparent
+)
 
 @Composable
 internal fun ImagineFormActions(

@@ -93,7 +93,11 @@ fun ImagineCategoryScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = if (state.data.countFor(category) == 0) {
+                    Arrangement.Top
+                } else {
+                    Arrangement.Center
+                }
             ) {
                 ImagineFilterTabs(
                     category = category,
@@ -129,6 +133,7 @@ fun ImagineCategoryScreen(
                                     state = state,
                                     viewModel = viewModel,
                                     onEdit = { composer = ImagineComposerTarget.Edit(it) },
+                                    onContribute = { composer = ImagineComposerTarget.Contribute(it) },
                                     onOpenCapsule = {
                                         revealedId = it.id
                                         viewModel.loadCapsuleEntries(it)
@@ -181,7 +186,7 @@ fun ImagineCategoryScreen(
             )
         }
 
-        errorMessage?.let { message ->
+        errorMessage?.takeIf { composer == null }?.let { message ->
             LaunchedEffect(message) {
                 delay(2500)
                 viewModel.dismissError()
@@ -267,6 +272,7 @@ private fun CategoryCard(
     state: ImagineUiState,
     viewModel: ImagineViewModel,
     onEdit: (ImagineShareable) -> Unit,
+    onContribute: (ImagineCapsule) -> Unit,
     onOpenCapsule: (ImagineCapsule) -> Unit,
     onOpenAttachment: (String) -> Unit
 ) {
@@ -343,7 +349,12 @@ private fun CategoryCard(
                         capsule = item,
                         myUid = session.myUid,
                         myEntry = state.capsuleEntries[item.id]?.mine,
-                        onOpenAttachment = onOpenAttachment
+                        onOpenAttachment = onOpenAttachment,
+                        onContribute = if (item.canContribute(session.myUid)) {
+                            { onContribute(item) }
+                        } else {
+                            null
+                        }
                     )
                 }
             }

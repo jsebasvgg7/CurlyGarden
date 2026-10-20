@@ -40,6 +40,7 @@ fun CapsuleSealedContent(
     myUid: String,
     myEntry: CapsuleEntry?,
     onOpenAttachment: (String) -> Unit,
+    onContribute: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -67,6 +68,23 @@ fun CapsuleSealedContent(
                 fontSize = 11.sp,
                 textAlign = TextAlign.Center
             )
+        }
+        if (onContribute != null) {
+            Spacer(Modifier.height(12.dp))
+            Surface(
+                onClick = onContribute,
+                shape = RoundedCornerShape(50),
+                color = CurlyColors.DarkLavenderPrimary
+            ) {
+                Text(
+                    text = "Aportar mi parte",
+                    color = CurlyColors.DarkTextPrimary,
+                    fontSize = 12.sp,
+                    lineHeight = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp)
+                )
+            }
         }
         if (myEntry != null) {
             Spacer(Modifier.height(14.dp))

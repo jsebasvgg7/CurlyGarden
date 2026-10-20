@@ -1,5 +1,7 @@
 package com.curlygarden.app.ui.screens.imagine
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -15,11 +17,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -147,4 +154,40 @@ fun ImagineAttachmentPicker(
             Text(errorMessage, color = Color(0xFFF4B7A6), fontSize = 12.sp)
         }
     }
+}
+
+@Composable
+internal fun ImagineAttachmentSelector(
+    attachment: ImagineAttachment?,
+    onAttachmentChange: (ImagineAttachment?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    var error by remember { mutableStateOf<String?>(null) }
+
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            val picked = context.readImagineAttachment(uri)
+            when {
+                picked == null -> error = "No se pudo leer el archivo"
+                picked.sizeBytes > IMAGINE_MAX_ATTACHMENT_BYTES -> error = "El archivo supera los 20 MB"
+                else -> {
+                    error = null
+                    onAttachmentChange(picked)
+                }
+            }
+        }
+    }
+
+    ImagineAttachmentPicker(
+        attachment = attachment,
+        existingUrl = null,
+        errorMessage = error,
+        onPick = { launcher.launch("*/*") },
+        onClear = {
+            error = null
+            onAttachmentChange(null)
+        },
+        modifier = modifier
+    )
 }
