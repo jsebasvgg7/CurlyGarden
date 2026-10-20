@@ -1,0 +1,32 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function myCoupleId() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('coupleId', null);
+    }
+
+    match /profile_photos/{userId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /idea_attachments/{coupleId}/{entryId}/{fileName} {
+      allow read: if isSignedIn() && myCoupleId() == coupleId;
+      allow create: if isSignedIn()
+        && myCoupleId() == coupleId
+        && request.resource.size <= 20 * 1024 * 1024;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
