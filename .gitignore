@@ -8,5 +8,6 @@ keystore.properties
 .gradle/
 build/
 CurlyGardenDoc.md
+CurlyGardenLog.md
 patch/
 docs/
