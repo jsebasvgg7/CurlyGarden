@@ -57,6 +57,12 @@ class AuthViewModel(
         }
     }
 
+    fun signOut() {
+        repository.signOut()
+        _uiState.value = AuthUiState()
+        viewModelScope.launch { repository.clearCredentialState() }
+    }
+
     fun onNavigationHandled() {
         _uiState.value = _uiState.value.copy(navigateTo = null)
     }

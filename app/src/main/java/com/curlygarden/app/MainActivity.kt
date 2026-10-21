@@ -6,11 +6,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.runtime.*
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import com.curlygarden.app.auth.AuthDestination
 import com.curlygarden.app.auth.AuthViewModel
 import com.curlygarden.app.auth.AuthViewModelFactory
+import com.curlygarden.app.auth.SessionStoreViewModel
 import com.curlygarden.app.startup.StartupDestination
 import com.curlygarden.app.startup.StartupRepository
 import com.curlygarden.app.ui.screens.auth.LoginScreen
@@ -67,6 +69,8 @@ fun CurlyGardenApp() {
         factory = AuthViewModelFactory(androidx.compose.ui.platform.LocalContext.current)
     )
 
+    val sessionStore: SessionStoreViewModel = viewModel()
+
     var screen by remember { mutableStateOf<AppScreen?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -78,49 +82,55 @@ fun CurlyGardenApp() {
         screen = resolveInitialScreen()
     }
 
-    when (screen) {
-        null -> CurlyGardenTheme(statusBarStyle = CurlyStatusBarStyle.Dark) {
-            SplashScreen(onContinueClicked = {})
-        }
-        AppScreen.Splash -> CurlyGardenTheme(statusBarStyle = CurlyStatusBarStyle.Dark) {
-            SplashScreen(onContinueClicked = { screen = AppScreen.Login })
-        }
-        AppScreen.Login -> CurlyGardenTheme(statusBarStyle = CurlyStatusBarStyle.Dark) {
-            LoginScreen(
-                viewModel = authViewModel,
-                onBackClicked = { screen = AppScreen.Splash },
-                onNavigate = { destination ->
-                    val fallback = when (destination) {
-                        AuthDestination.CreateProfile -> AppScreen.CreateProfile
-                        AuthDestination.CoupleOnboarding -> AppScreen.CoupleOnboarding
-                    }
-                    screen = null
-                    scope.launch {
-                        val resolved = runCatching { resolveInitialScreen() }.getOrNull()
-                        screen = if (resolved == null || resolved == AppScreen.Splash) {
-                            fallback
-                        } else {
-                            resolved
+    CompositionLocalProvider(LocalViewModelStoreOwner provides sessionStore) {
+        when (screen) {
+            null -> CurlyGardenTheme(statusBarStyle = CurlyStatusBarStyle.Dark) {
+                SplashScreen(onContinueClicked = {})
+            }
+            AppScreen.Splash -> CurlyGardenTheme(statusBarStyle = CurlyStatusBarStyle.Dark) {
+                SplashScreen(onContinueClicked = { screen = AppScreen.Login })
+            }
+            AppScreen.Login -> CurlyGardenTheme(statusBarStyle = CurlyStatusBarStyle.Dark) {
+                LoginScreen(
+                    viewModel = authViewModel,
+                    onBackClicked = { screen = AppScreen.Splash },
+                    onNavigate = { destination ->
+                        val fallback = when (destination) {
+                            AuthDestination.CreateProfile -> AppScreen.CreateProfile
+                            AuthDestination.CoupleOnboarding -> AppScreen.CoupleOnboarding
+                        }
+                        screen = null
+                        scope.launch {
+                            val resolved = runCatching { resolveInitialScreen() }.getOrNull()
+                            screen = if (resolved == null || resolved == AppScreen.Splash) {
+                                fallback
+                            } else {
+                                resolved
+                            }
                         }
                     }
-                }
-            )
-        }
-        AppScreen.CreateProfile -> CurlyGardenTheme(statusBarStyle = CurlyStatusBarStyle.Dark) {
-            CreateProfileScreen(
-                onProfileSaved = { screen = AppScreen.CoupleOnboarding }
-            )
-        }
-        AppScreen.CoupleOnboarding -> CurlyGardenTheme(statusBarStyle = CurlyStatusBarStyle.Dark) {
-            CoupleOnboardingScreen(
-                onLinked = { screen = AppScreen.Home },
-                onSkipClicked = { screen = AppScreen.Home }
-            )
-        }
-        AppScreen.Home -> CurlyGardenTheme(statusBarStyle = CurlyStatusBarStyle.Dark) {
-            CurlyGardenHome(
-                onLoggedOut = { screen = AppScreen.Login }
-            )
+                )
+            }
+            AppScreen.CreateProfile -> CurlyGardenTheme(statusBarStyle = CurlyStatusBarStyle.Dark) {
+                CreateProfileScreen(
+                    onProfileSaved = { screen = AppScreen.CoupleOnboarding }
+                )
+            }
+            AppScreen.CoupleOnboarding -> CurlyGardenTheme(statusBarStyle = CurlyStatusBarStyle.Dark) {
+                CoupleOnboardingScreen(
+                    onLinked = { screen = AppScreen.Home },
+                    onSkipClicked = { screen = AppScreen.Home }
+                )
+            }
+            AppScreen.Home -> CurlyGardenTheme(statusBarStyle = CurlyStatusBarStyle.Dark) {
+                CurlyGardenHome(
+                    onLoggedOut = {
+                        sessionStore.reset()
+                        authViewModel.signOut()
+                        screen = AppScreen.Login
+                    }
+                )
+            }
         }
     }
 }
@@ -159,10 +169,7 @@ private fun CurlyGardenHome(onLoggedOut: () -> Unit) {
         HomeDestination.Me -> ProfileScreen(
             onBackClicked = { destination = HomeDestination.Home },
             onGoToOnboardingClicked = { destination = HomeDestination.MeOnboarding },
-            onLogoutClicked = {
-                com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
-                onLoggedOut()
-            }
+            onLogoutClicked = onLoggedOut
         )
     }
 }

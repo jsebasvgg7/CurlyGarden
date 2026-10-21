@@ -1,6 +1,7 @@
 package com.curlygarden.app.auth
 
 import android.content.Context
+import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -87,6 +88,10 @@ class AuthRepository(
 
     fun signOut() {
         auth.signOut()
+    }
+
+    suspend fun clearCredentialState() {
+        runCatching { credentialManager.clearCredentialState(ClearCredentialStateRequest()) }
     }
 
     private fun generateNonce(): String {
