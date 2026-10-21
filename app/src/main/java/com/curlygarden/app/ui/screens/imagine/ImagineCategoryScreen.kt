@@ -1,5 +1,10 @@
 package com.curlygarden.app.ui.screens.imagine
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import com.curlygarden.app.ui.animation.pressScale
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -115,7 +120,24 @@ fun ImagineCategoryScreen(
                 } else {
                     AnimatedContent(
                         targetState = current.id,
-                        transitionSpec = { fadeIn() togetherWith fadeOut() },
+                        transitionSpec = {
+                            val ids = state.visibleItems.map { it.id }
+                            val from = ids.indexOf(initialState)
+                            val to = ids.indexOf(targetState)
+                            if (from < 0 || to < 0 || from == to) {
+                                fadeIn() togetherWith fadeOut()
+                            } else {
+                                val dir = if (to > from) 1 else -1
+                                (fadeIn(tween(260, easing = FastOutSlowInEasing)) +
+                                    slideInHorizontally(
+                                        animationSpec = tween(260, easing = FastOutSlowInEasing)
+                                    ) { -dir * it / 8 }) togetherWith
+                                    (fadeOut(tween(160)) +
+                                        slideOutHorizontally(
+                                            animationSpec = tween(260, easing = FastOutSlowInEasing)
+                                        ) { dir * it / 8 })
+                            }
+                        },
                         modifier = Modifier
                             .weight(1f, fill = false)
                             .fillMaxWidth(),
@@ -450,6 +472,7 @@ private fun BottomBar(
             color = CurlyColors.DarkSurfaceElevated,
             modifier = Modifier
                 .weight(1f)
+                .pressScale(pressedScale = 0.97f, enabled = canAdd)
                 .height(52.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {

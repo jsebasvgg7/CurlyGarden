@@ -1,5 +1,6 @@
 package com.curlygarden.app.ui.screens.imagine
 
+import com.curlygarden.app.ui.animation.pressScale
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -229,7 +230,7 @@ private fun CategoryCard(
         shape = RoundedCornerShape(20.dp),
         color = CurlyColors.DarkSurface,
         border = BorderStroke(1.dp, CurlyColors.DarkBorder),
-        modifier = modifier.aspectRatio(1f)
+        modifier = modifier.pressScale().aspectRatio(1f)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Text(

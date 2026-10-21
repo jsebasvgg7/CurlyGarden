@@ -5,6 +5,16 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -139,37 +149,73 @@ private enum class HomeDestination {
     Home, Me, Talk, Draw, Imagine, MeOnboarding, InviteOnboarding
 }
 
+private fun HomeDestination.depth(): Int = when (this) {
+    HomeDestination.Home -> 0
+    HomeDestination.MeOnboarding -> 2
+    else -> 1
+}
+
 @Composable
 private fun CurlyGardenHome(onLoggedOut: () -> Unit) {
     var destination by remember { mutableStateOf(HomeDestination.Home) }
+    var introPending by remember { mutableStateOf(true) }
 
-    when (destination) {
-        HomeDestination.Talk -> TalkScreen(onBack = { destination = HomeDestination.Home })
-        HomeDestination.Draw -> DrawFlow(onExit = { destination = HomeDestination.Home })
-        HomeDestination.Imagine -> ImagineScreen(onBack = { destination = HomeDestination.Home })
-        HomeDestination.Home -> HomeScreen(
-            onModuleClick = { module ->
-                when (module) {
-                    "hablar" -> destination = HomeDestination.Talk
-                    "dibujar" -> destination = HomeDestination.Draw
-                    "imaginar" -> destination = HomeDestination.Imagine
-                }
-            },
-            onProfileClick = { destination = HomeDestination.Me },
-            onInviteClick = { destination = HomeDestination.InviteOnboarding }
-        )
-        HomeDestination.InviteOnboarding -> CoupleOnboardingScreen(
-            onLinked = { destination = HomeDestination.Home },
-            onBackClicked = { destination = HomeDestination.Home }
-        )
-        HomeDestination.MeOnboarding -> CoupleOnboardingScreen(
-            onLinked = { destination = HomeDestination.Me },
-            onBackClicked = { destination = HomeDestination.Me }
-        )
-        HomeDestination.Me -> ProfileScreen(
-            onBackClicked = { destination = HomeDestination.Home },
-            onGoToOnboardingClicked = { destination = HomeDestination.MeOnboarding },
-            onLogoutClicked = onLoggedOut
-        )
+    LaunchedEffect(destination) {
+        if (destination != HomeDestination.Home) introPending = false
+    }
+
+    AnimatedContent(
+        targetState = destination,
+        transitionSpec = {
+            val forward = targetState.depth() > initialState.depth()
+            val spec = if (forward) {
+                (fadeIn(tween(300, easing = FastOutSlowInEasing)) +
+                    scaleIn(
+                        initialScale = 0.93f,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )) togetherWith ExitTransition.None
+            } else {
+                EnterTransition.None togetherWith
+                    (fadeOut(tween(220, easing = FastOutSlowInEasing)) +
+                        scaleOut(
+                            targetScale = 0.95f,
+                            animationSpec = tween(220, easing = FastOutSlowInEasing)
+                        ))
+            }
+            spec.targetContentZIndex = if (forward) 1f else 0f
+            spec
+        },
+        label = "homeDestination"
+    ) { current ->
+        when (current) {
+            HomeDestination.Talk -> TalkScreen(onBack = { destination = HomeDestination.Home })
+            HomeDestination.Draw -> DrawFlow(onExit = { destination = HomeDestination.Home })
+            HomeDestination.Imagine -> ImagineScreen(onBack = { destination = HomeDestination.Home })
+            HomeDestination.Home -> HomeScreen(
+                onModuleClick = { module ->
+                    when (module) {
+                        "hablar" -> destination = HomeDestination.Talk
+                        "dibujar" -> destination = HomeDestination.Draw
+                        "imaginar" -> destination = HomeDestination.Imagine
+                    }
+                },
+                onProfileClick = { destination = HomeDestination.Me },
+                onInviteClick = { destination = HomeDestination.InviteOnboarding },
+                animateEntrance = introPending
+            )
+            HomeDestination.InviteOnboarding -> CoupleOnboardingScreen(
+                onLinked = { destination = HomeDestination.Home },
+                onBackClicked = { destination = HomeDestination.Home }
+            )
+            HomeDestination.MeOnboarding -> CoupleOnboardingScreen(
+                onLinked = { destination = HomeDestination.Me },
+                onBackClicked = { destination = HomeDestination.Me }
+            )
+            HomeDestination.Me -> ProfileScreen(
+                onBackClicked = { destination = HomeDestination.Home },
+                onGoToOnboardingClicked = { destination = HomeDestination.MeOnboarding },
+                onLogoutClicked = onLoggedOut
+            )
+        }
     }
 }

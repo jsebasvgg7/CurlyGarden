@@ -1,5 +1,8 @@
 package com.curlygarden.app.ui.screens.home
 
+import com.curlygarden.app.ui.animation.entrance
+import com.curlygarden.app.ui.animation.pressScale
+import com.curlygarden.app.ui.animation.pressScale
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.LocalIndication
@@ -48,6 +51,7 @@ fun HomeScreen(
     onModuleClick: (String) -> Unit = {},
     onProfileClick: () -> Unit = {},
     onInviteClick: () -> Unit = {},
+    animateEntrance: Boolean = false,
     viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory())
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -74,7 +78,9 @@ fun HomeScreen(
                 .padding(20.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .entrance(0, animateEntrance)
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -134,16 +140,21 @@ fun HomeScreen(
 
             Spacer(Modifier.height(20.dp))
 
-            HomeModuleHeroCard(
-                onClick = { onModuleClick("dibujar") },
-                myProfile = uiState.myProfile,
-                partnerProfile = uiState.partnerProfile,
-                onInviteClick = onInviteClick
-            )
+            Box(modifier = Modifier.entrance(1, animateEntrance)) {
+                HomeModuleHeroCard(
+                    onClick = { onModuleClick("dibujar") },
+                    myProfile = uiState.myProfile,
+                    partnerProfile = uiState.partnerProfile,
+                    onInviteClick = onInviteClick
+                )
+            }
 
             Spacer(Modifier.height(16.dp))
 
-            StreakWeekRow(completedDates = uiState.weekDaysCompleted)
+            StreakWeekRow(
+                completedDates = uiState.weekDaysCompleted,
+                modifier = Modifier.entrance(2, animateEntrance)
+            )
 
             Spacer(Modifier.height(24.dp))
 
@@ -151,14 +162,17 @@ fun HomeScreen(
                 "Nuestros espacios",
                 color = CurlyColors.DarkTextPrimary,
                 fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
+                fontSize = 18.sp,
+                modifier = Modifier.entrance(3, animateEntrance)
             )
 
             Spacer(Modifier.height(12.dp))
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.height(232.dp)
+                modifier = Modifier
+                    .entrance(3, animateEntrance)
+                    .height(232.dp)
             ) {
                 PlaySpaceCard(
                     onClick = { onModuleClick("jugar") },
@@ -189,10 +203,12 @@ fun HomeScreen(
             }
 
             Spacer(Modifier.height(16.dp))
-            TodaysMomentCard(
-                onClick = { onModuleClick("recuerdos") },
-                latestMemory = uiState.latestMemory
-            )
+            Box(modifier = Modifier.entrance(4, animateEntrance)) {
+                TodaysMomentCard(
+                    onClick = { onModuleClick("recuerdos") },
+                    latestMemory = uiState.latestMemory
+                )
+            }
             Spacer(Modifier.height(20.dp))
         }
     }
@@ -240,7 +256,7 @@ private fun IconButtonBadge(onClick: () -> Unit, content: @Composable () -> Unit
         onClick = onClick,
         shape = CircleShape,
         color = CurlyColors.DarkSurfaceElevated,
-        modifier = Modifier.size(44.dp)
+        modifier = Modifier.pressScale(pressedScale = 0.9f).size(44.dp)
     ) {
         Box(contentAlignment = Alignment.Center) { content() }
     }
@@ -366,6 +382,7 @@ private fun HomeModuleHeroCard(
         shape = RoundedCornerShape(26.dp),
         color = CurlyColors.DarkLavenderLight,
         modifier = Modifier
+            .pressScale(pressedScale = 0.98f)
             .fillMaxWidth()
             .height(190.dp)
     ) {
@@ -486,7 +503,7 @@ private fun PlaySpaceCard(
         onClick = onClick,
         shape = RoundedCornerShape(26.dp),
         color = bg,
-        modifier = modifier
+        modifier = modifier.pressScale()
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -572,7 +589,7 @@ private fun ImagineSpaceCard(onClick: () -> Unit, modifier: Modifier = Modifier)
         onClick = onClick,
         shape = RoundedCornerShape(24.dp),
         color = bg,
-        modifier = modifier
+        modifier = modifier.pressScale()
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -647,7 +664,7 @@ private fun ChatSpaceCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
         onClick = onClick,
         shape = RoundedCornerShape(24.dp),
         color = bg,
-        modifier = modifier
+        modifier = modifier.pressScale()
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -762,7 +779,8 @@ private fun TodaysMomentCard(
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(24.dp),
-        color = Color(0xFFBFB9FD)
+        color = Color(0xFFBFB9FD),
+        modifier = Modifier.pressScale(pressedScale = 0.98f)
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Row(

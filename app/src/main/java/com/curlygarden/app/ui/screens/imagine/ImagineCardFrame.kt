@@ -1,5 +1,7 @@
 package com.curlygarden.app.ui.screens.imagine
 
+import com.curlygarden.app.ui.animation.popWhen
+import com.curlygarden.app.ui.animation.pressScale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -283,7 +285,7 @@ private fun ActionPill(
         onClick = onClick,
         shape = RoundedCornerShape(50),
         color = CurlyColors.DarkLavenderPrimary,
-        modifier = modifier
+        modifier = modifier.pressScale(pressedScale = 0.93f)
     ) {
         Text(
             text = label,
@@ -326,7 +328,7 @@ fun ImagineIconRow(
                 if (liked) Icons.Filled.Favorite else FeatherIcons.Heart,
                 contentDescription = "me gusta",
                 tint = if (liked) LikedColor else CurlyColors.DarkTextPrimary,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.popWhen(liked).size(16.dp)
             )
         }
         IconCircle(onClick = null) {
@@ -350,7 +352,7 @@ private fun IconCircle(
             onClick = onClick,
             shape = CircleShape,
             color = CurlyColors.DarkSurface,
-            modifier = Modifier.size(32.dp)
+            modifier = Modifier.pressScale(pressedScale = 0.88f).size(32.dp)
         ) {
             Box(contentAlignment = Alignment.Center) { content() }
         }

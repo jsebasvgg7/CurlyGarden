@@ -1,5 +1,7 @@
 package com.curlygarden.app.ui.screens.imagine
 
+import com.curlygarden.app.ui.animation.entrance
+import com.curlygarden.app.ui.animation.popIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -156,13 +158,15 @@ fun CapsuleOpenedContent(
             entries.mine?.let { it to myProfile },
             entries.partner?.let { it to partnerProfile }
         ).sortedBy { it.first.createdAt }
-        parts.forEach { (entry, profile) ->
+        parts.forEachIndexed { index, (entry, profile) ->
             EntryBlock(
                 label = profile?.name?.takeIf { it.isNotBlank() } ?: "El otro",
                 entry = entry,
                 profile = profile,
                 onOpenAttachment = onOpenAttachment,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .entrance(index + 2)
+                    .fillMaxWidth()
             )
         }
         val missing = missingMessage(capsule, myProfile, partnerProfile)
@@ -199,6 +203,7 @@ fun CapsuleRevealDialog(
             shape = RoundedCornerShape(28.dp),
             color = CurlyColors.DarkSurfaceElevated,
             modifier = Modifier
+                .popIn()
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
         ) {

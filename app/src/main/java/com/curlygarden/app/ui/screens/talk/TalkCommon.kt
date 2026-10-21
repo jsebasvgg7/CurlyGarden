@@ -1,5 +1,6 @@
 package com.curlygarden.app.ui.screens.talk
 
+import com.curlygarden.app.ui.animation.pressScale
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -60,7 +61,7 @@ fun TalkCircleButton(
         enabled = enabled,
         shape = CircleShape,
         color = CurlyColors.DarkSurfaceElevated.copy(alpha = if (enabled) 1f else 0.5f),
-        modifier = modifier.size(size)
+        modifier = modifier.pressScale(pressedScale = 0.9f, enabled = enabled).size(size)
     ) {
         Box(contentAlignment = Alignment.Center) { content() }
     }
