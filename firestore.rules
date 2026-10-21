@@ -117,6 +117,55 @@ service cloud.firestore {
         && existsAfter(/databases/$(database)/documents/couples/$(coupleId)/imagineCapsules/$(capsuleId)/entries/$(request.auth.uid));
     }
 
+    function dailyPath(coupleId, date) {
+      return /databases/$(database)/documents/couples/$(coupleId)/dailyChallenges/$(date);
+    }
+
+    function responsePath(coupleId, date, uid) {
+      return /databases/$(database)/documents/couples/$(coupleId)/dailyChallenges/$(date)/responses/$(uid);
+    }
+
+    function sessionPath(coupleId, sessionId) {
+      return /databases/$(database)/documents/couples/$(coupleId)/gameSessions/$(sessionId);
+    }
+
+    function validPicks(data) {
+      return data.keys().hasOnly(['picks', 'createdAt'])
+        && data.picks is list
+        && data.picks.size() == 5
+        && data.createdAt == request.time;
+    }
+
+    function isSessionAnswer(coupleId, sessionId) {
+      let next = request.resource.data.answeredBy;
+      return resource.data.status == 'answering'
+        && onlyChanges(['answeredBy', 'status'])
+        && !(request.auth.uid in resource.data.answeredBy)
+        && next == resource.data.answeredBy.concat([request.auth.uid])
+        && request.resource.data.status == (next.size() == 2
+             ? (resource.data.type == 'thisOrThat' ? 'revealed' : 'guessing')
+             : 'answering')
+        && existsAfter(/databases/$(database)/documents/couples/$(coupleId)/gameSessions/$(sessionId)/answers/$(request.auth.uid));
+    }
+
+    function isSessionGuess(coupleId, sessionId) {
+      let next = request.resource.data.guessedBy;
+      return resource.data.status == 'guessing'
+        && onlyChanges(['guessedBy', 'status'])
+        && !(request.auth.uid in resource.data.guessedBy)
+        && next == resource.data.guessedBy.concat([request.auth.uid])
+        && request.resource.data.status == (next.size() == 2 ? 'revealed' : 'guessing')
+        && existsAfter(/databases/$(database)/documents/couples/$(coupleId)/gameSessions/$(sessionId)/guesses/$(request.auth.uid));
+    }
+
+    function isSessionScore() {
+      return resource.data.status == 'revealed'
+        && resource.data.type == 'knowMe'
+        && onlyChanges(['scored'])
+        && !(request.auth.uid in resource.data.scored)
+        && request.resource.data.scored == resource.data.scored.concat([request.auth.uid]);
+    }
+
     match /users/{userId} {
       allow read: if isMe(userId) || sharesCoupleWith(resource.data);
       allow create: if isMe(userId);
@@ -179,12 +228,123 @@ service cloud.firestore {
 
       match /dailyChallenges/{date} {
         allow read: if belongsToCouple(coupleId);
-        allow write: if belongsToCouple(coupleId);
+
+        allow create: if belongsToCouple(coupleId)
+          && date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && request.resource.data.keys().hasOnly(
+               ['type', 'bankIndex', 'status', 'answeredBy', 'createdAt']
+             )
+          && request.resource.data.type in ['question', 'action']
+          && request.resource.data.bankIndex is int
+          && request.resource.data.bankIndex >= 0
+          && request.resource.data.status == 'open'
+          && request.resource.data.answeredBy == [request.auth.uid]
+          && request.resource.data.createdAt == request.time
+          && existsAfter(responsePath(coupleId, date, request.auth.uid));
+
+        allow update: if belongsToCouple(coupleId)
+          && resource.data.status == 'open'
+          && onlyChanges(['answeredBy', 'status'])
+          && !(request.auth.uid in resource.data.answeredBy)
+          && request.resource.data.answeredBy == resource.data.answeredBy.concat([request.auth.uid])
+          && request.resource.data.answeredBy.size() == 2
+          && request.resource.data.status == 'completed'
+          && existsAfter(responsePath(coupleId, date, request.auth.uid));
+
+        allow delete: if false;
+
+        match /responses/{authorId} {
+          allow read: if belongsToCouple(coupleId)
+            && (authorId == request.auth.uid
+                || get(dailyPath(coupleId, date)).data.status == 'completed');
+
+          allow create: if belongsToCouple(coupleId)
+            && authorId == request.auth.uid
+            && request.auth.uid in getAfter(dailyPath(coupleId, date)).data.answeredBy
+            && request.resource.data.keys().hasOnly(['text', 'createdAt'])
+            && request.resource.data.createdAt == request.time
+            && (getAfter(dailyPath(coupleId, date)).data.type == 'question'
+                ? (request.resource.data.text is string
+                   && request.resource.data.text.size() > 0
+                   && request.resource.data.text.size() <= 140)
+                : !('text' in request.resource.data));
+
+          allow update, delete: if false;
+        }
       }
 
       match /gameSessions/{sessionId} {
         allow read: if belongsToCouple(coupleId);
-        allow write: if belongsToCouple(coupleId);
+
+        allow create: if belongsToCouple(coupleId)
+          && request.resource.data.keys().hasOnly(
+               ['type', 'questionIds', 'status', 'answeredBy', 'guessedBy', 'scored', 'createdBy', 'createdAt']
+             )
+          && request.resource.data.type in ['thisOrThat', 'knowMe']
+          && request.resource.data.questionIds is list
+          && request.resource.data.questionIds.size() == 5
+          && request.resource.data.status == 'answering'
+          && request.resource.data.answeredBy == []
+          && (request.resource.data.type == 'knowMe'
+              ? (request.resource.data.guessedBy == [] && request.resource.data.scored == [])
+              : !('guessedBy' in request.resource.data || 'scored' in request.resource.data))
+          && isCreator(request.resource.data)
+          && request.resource.data.createdAt == request.time;
+
+        allow update: if belongsToCouple(coupleId)
+          && (isSessionAnswer(coupleId, sessionId)
+              || isSessionGuess(coupleId, sessionId)
+              || isSessionScore());
+
+        allow delete: if false;
+
+        match /answers/{authorId} {
+          allow read: if belongsToCouple(coupleId)
+            && (authorId == request.auth.uid
+                || get(sessionPath(coupleId, sessionId)).data.status == 'revealed');
+
+          allow create: if belongsToCouple(coupleId)
+            && authorId == request.auth.uid
+            && get(sessionPath(coupleId, sessionId)).data.status == 'answering'
+            && request.auth.uid in getAfter(sessionPath(coupleId, sessionId)).data.answeredBy
+            && validPicks(request.resource.data);
+
+          allow update, delete: if false;
+        }
+
+        match /guesses/{authorId} {
+          allow read: if belongsToCouple(coupleId)
+            && (authorId == request.auth.uid
+                || get(sessionPath(coupleId, sessionId)).data.status == 'revealed');
+
+          allow create: if belongsToCouple(coupleId)
+            && authorId == request.auth.uid
+            && get(sessionPath(coupleId, sessionId)).data.status == 'guessing'
+            && request.auth.uid in getAfter(sessionPath(coupleId, sessionId)).data.guessedBy
+            && validPicks(request.resource.data);
+
+          allow update, delete: if false;
+        }
+      }
+
+      match /playStats/{statsUid} {
+        allow read: if belongsToCouple(coupleId);
+
+        allow create: if belongsToCouple(coupleId)
+          && statsUid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['points'])
+          && request.resource.data.points is int
+          && request.resource.data.points >= 0
+          && request.resource.data.points <= 25;
+
+        allow update: if belongsToCouple(coupleId)
+          && statsUid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['points'])
+          && request.resource.data.points is int
+          && request.resource.data.points >= resource.data.points
+          && request.resource.data.points <= resource.data.points + 25;
+
+        allow delete: if false;
       }
 
       match /imagineIdeas/{entryId} {
