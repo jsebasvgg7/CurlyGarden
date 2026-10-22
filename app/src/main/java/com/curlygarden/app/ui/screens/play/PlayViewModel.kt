@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.curlygarden.app.data.streak.todayKeyFor
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -11,7 +12,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -23,7 +26,8 @@ enum class PlayRoute {
     INDEX,
     DAILY,
     THIS_OR_THAT,
-    KNOW_ME
+    KNOW_ME,
+    ELEVEN
 }
 
 data class PlayUiState(
@@ -37,6 +41,8 @@ data class PlayUiState(
     val dailyResponses: DailyResponses = DailyResponses(),
     val sessions: List<GameSession> = emptyList(),
     val stats: PlayStats = PlayStats(),
+    val eleven: Map<String, ElevenStats> = emptyMap(),
+    val elevenClock: ElevenClock = ElevenClock(),
     val reveal: GameReveal? = null,
     val isWorking: Boolean = false,
     val loadFailed: Boolean = false
@@ -50,6 +56,23 @@ data class PlayUiState(
                 myUid in challenge.answeredBy -> DailyCardState.WAITING
                 else -> DailyCardState.PENDING
             }
+        }
+
+    val elevenPodium: List<ElevenPodiumEntry>
+        get() {
+            val current = session ?: return emptyList()
+            val mine = eleven[current.myUid]
+            val entries = listOfNotNull(
+                ElevenPodiumEntry(current.myProfile, mine?.count ?: 0, mine?.pressedAtMillis ?: 0L),
+                current.partnerProfile?.let { partner ->
+                    val theirs = eleven[partner.uid]
+                    ElevenPodiumEntry(partner, theirs?.count ?: 0, theirs?.pressedAtMillis ?: 0L)
+                }
+            )
+            return entries.sortedWith(
+                compareByDescending<ElevenPodiumEntry> { it.count }
+                    .thenByDescending { it.lastPressedMillis }
+            )
         }
 
     fun activeSession(type: PlayGameType): GameSession? =
@@ -87,7 +110,8 @@ data class PlayUiState(
 private data class PlayData(
     val daily: DailyChallenge? = null,
     val sessions: List<GameSession> = emptyList(),
-    val stats: PlayStats = PlayStats()
+    val stats: PlayStats = PlayStats(),
+    val eleven: Map<String, ElevenStats> = emptyMap()
 )
 
 private data class PlayLocal(
@@ -132,6 +156,7 @@ class PlayViewModel(
     private val sessionState = MutableStateFlow<PlaySession?>(null)
     private val sessionLoaded = MutableStateFlow(false)
     private val local = MutableStateFlow(PlayLocal())
+    private val elevenClock = MutableStateFlow(ElevenClock())
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
@@ -154,15 +179,19 @@ class PlayViewModel(
                     repository.observeSessions(session.coupleId)
                         .catch { markLoadFailed(); emit(emptyList()) },
                     repository.observeStats(session.coupleId, session.myUid)
-                        .catch { markLoadFailed(); emit(PlayStats()) }
-                ) { daily, sessions, stats -> PlayData(daily, sessions, stats) }
+                        .catch { markLoadFailed(); emit(PlayStats()) },
+                    repository.observeEleven(
+                        session.coupleId,
+                        listOfNotNull(session.myUid, session.partnerUid)
+                    ).catch { markLoadFailed(); emit(emptyMap()) }
+                ) { daily, sessions, stats, eleven -> PlayData(daily, sessions, stats, eleven) }
             }
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, PlayData())
 
     val uiState: StateFlow<PlayUiState> = combine(
-        sessionLoaded, sessionState, data, local
-    ) { loaded, session, current, state ->
+        sessionLoaded, sessionState, data, local, elevenClock
+    ) { loaded, session, current, state, clock ->
         val plan = dailyPlan(state.dateKey)
         PlayUiState(
             isLoading = !loaded,
@@ -175,6 +204,8 @@ class PlayViewModel(
             dailyResponses = state.dailyResponses,
             sessions = current.sessions,
             stats = current.stats,
+            eleven = current.eleven,
+            elevenClock = clock,
             reveal = state.reveal,
             isWorking = state.isWorking,
             loadFailed = state.loadFailed
@@ -194,6 +225,27 @@ class PlayViewModel(
             data.map { state -> state.daily?.let { Triple(it.dateKey, it.isCompleted, it.answeredBy) } }
                 .distinctUntilChanged()
                 .collect { refreshResponses() }
+        }
+        viewModelScope.launch {
+            combine(
+                local.map { it.route }.distinctUntilChanged(),
+                sessionState,
+                data.map { state -> sessionState.value?.let { state.eleven[it.myUid]?.lastDay } }
+                    .distinctUntilChanged()
+            ) { route, session, lastDay -> Triple(route, session, lastDay) }
+                .flatMapLatest { (route, session, lastDay) ->
+                    if (route != PlayRoute.ELEVEN || session == null) {
+                        emptyFlow<ElevenClock>()
+                    } else {
+                        flow {
+                            while (true) {
+                                emit(computeElevenClock(session.timezone, lastDay))
+                                delay(1000L - System.currentTimeMillis() % 1000L)
+                            }
+                        }
+                    }
+                }
+                .collect { clock -> elevenClock.value = clock }
         }
     }
 
@@ -246,6 +298,16 @@ class PlayViewModel(
         work("No se pudo enviar tu respuesta") {
             repository.submitDaily(it, state.dateKey, state.dailyType, state.dailyBankIndex, text)
         }
+    }
+
+    fun pressEleven() {
+        val state = uiState.value
+        val session = state.session ?: return
+        if (state.route != PlayRoute.ELEVEN) return
+        val lastDay = state.eleven[session.myUid]?.lastDay
+        if (computeElevenClock(session.timezone, lastDay).phase != ElevenPhase.OPEN) return
+        val dateKey = todayKeyFor(session.timezone)
+        work("No se pudo registrar tu 11:11") { repository.pressEleven(it, dateKey) }
     }
 
     fun startGame(type: PlayGameType) {

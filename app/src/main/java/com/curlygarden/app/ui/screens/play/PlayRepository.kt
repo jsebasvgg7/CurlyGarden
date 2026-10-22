@@ -12,6 +12,9 @@ import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 
 class PlayRepository(
@@ -30,6 +33,9 @@ class PlayRepository(
 
     private fun statsDoc(coupleId: String, uid: String): DocumentReference =
         couple(coupleId).collection("playStats").document(uid)
+
+    private fun elevenDoc(coupleId: String, uid: String): DocumentReference =
+        couple(coupleId).collection("elevenStats").document(uid)
 
     suspend fun resolveSession(): PlaySession? {
         val uid = auth.currentUser?.uid ?: return null
@@ -88,6 +94,48 @@ class PlayRepository(
             trySend(PlayStats(points = snapshot?.pointsValue() ?: 0))
         }
         awaitClose { listener.remove() }
+    }
+
+    fun observeEleven(coupleId: String, uids: List<String>): Flow<Map<String, ElevenStats>> {
+        val distinct = uids.distinct()
+        if (distinct.isEmpty()) return flowOf(emptyMap())
+        val flows = distinct.map { uid ->
+            callbackFlow<ElevenStats> {
+                val listener = elevenDoc(coupleId, uid).addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        close(error)
+                        return@addSnapshotListener
+                    }
+                    trySend(snapshot?.toElevenStats() ?: ElevenStats())
+                }
+                awaitClose { listener.remove() }
+            }.map { stats -> uid to stats }
+        }
+        return combine(flows) { entries -> entries.toMap() }
+    }
+
+    suspend fun pressEleven(session: PlaySession, dateKey: String) {
+        val elevenRef = elevenDoc(session.coupleId, session.myUid)
+        val statsRef = statsDoc(session.coupleId, session.myUid)
+
+        firestore.runTransaction { transaction ->
+            val eleven = transaction.get(elevenRef)
+            val stats = transaction.get(statsRef)
+
+            if (eleven.getString("lastDay") == dateKey) return@runTransaction null
+
+            val count = (eleven.getLong("count") ?: 0L) + 1L
+            transaction.set(
+                elevenRef,
+                hashMapOf<String, Any>(
+                    "count" to count,
+                    "lastDay" to dateKey,
+                    "pressedAt" to FieldValue.serverTimestamp()
+                )
+            )
+            transaction.set(statsRef, mapOf("points" to stats.pointsValue() + POINTS_ELEVEN))
+            null
+        }.await()
     }
 
     suspend fun loadDailyResponses(
@@ -345,6 +393,17 @@ class PlayRepository(
 
     private fun DocumentSnapshot.picks(): List<Int>? =
         if (!exists()) null else (get("picks") as? List<*>)?.mapNotNull { (it as? Number)?.toInt() }
+
+    private fun DocumentSnapshot.toElevenStats(): ElevenStats =
+        if (!exists()) {
+            ElevenStats()
+        } else {
+            ElevenStats(
+                count = (getLong("count") ?: 0L).toInt(),
+                lastDay = getString("lastDay").orEmpty(),
+                pressedAtMillis = getTimestamp("pressedAt")?.toDate()?.time ?: Long.MAX_VALUE
+            )
+        }
 
     private fun DocumentSnapshot.toResponse(uid: String): DailyResponse? =
         if (exists()) DailyResponse(authorUid = uid, text = getString("text")) else null

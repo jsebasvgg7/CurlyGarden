@@ -61,7 +61,7 @@ fun PlayScreen(onBack: () -> Unit) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (state.route) {
-            PlayRoute.INDEX -> PlayIndexContent(state, viewModel, onBack)
+            PlayRoute.INDEX, PlayRoute.ELEVEN -> PlayIndexContent(state, viewModel, onBack)
             PlayRoute.DAILY -> PlayDailyScreen(state, viewModel, onBack = { viewModel.back() })
             PlayRoute.THIS_OR_THAT -> PlayThisOrThatScreen(state, viewModel, onBack = { viewModel.back() })
             PlayRoute.KNOW_ME -> PlayKnowMeScreen(state, viewModel, onBack = { viewModel.back() })
