@@ -198,27 +198,23 @@ private fun DailyIconBadge(icon: ImageVector) {
 }
 
 @Composable
-private fun DailyQuestionForm(
-    prompt: String,
-    state: PlayUiState,
-    viewModel: PlayViewModel
+private fun DailyTextInput(
+    text: String,
+    onTextChange: (String) -> Unit,
+    placeholder: String,
+    minLines: Int,
+    maxLines: Int,
+    modifier: Modifier = Modifier
 ) {
-    var text by rememberSaveable { mutableStateOf("") }
-    val canSend = text.trim().isNotEmpty() && !state.isWorking
-
-    DailyPromptCard(prompt, isQuestion = true, completed = false, modifier = Modifier.entrance(0))
-    Spacer(Modifier.height(16.dp))
     TextField(
         value = text,
-        onValueChange = { if (it.length <= PLAY_ANSWER_MAX) text = it },
-        modifier = Modifier
-            .fillMaxWidth()
-            .entrance(1),
+        onValueChange = { if (it.length <= PLAY_ANSWER_MAX) onTextChange(it) },
+        modifier = modifier.fillMaxWidth(),
         placeholder = {
-            Text("Escribe tu respuesta...", color = CurlyColors.DarkTextMuted)
+            Text(placeholder, color = CurlyColors.DarkTextMuted)
         },
-        minLines = 4,
-        maxLines = 6,
+        minLines = minLines,
+        maxLines = maxLines,
         shape = RoundedCornerShape(20.dp),
         keyboardOptions = KeyboardOptions(
             capitalization = KeyboardCapitalization.Sentences,
@@ -246,6 +242,27 @@ private fun DailyQuestionForm(
         textAlign = TextAlign.End,
         modifier = Modifier.fillMaxWidth()
     )
+}
+
+@Composable
+private fun DailyQuestionForm(
+    prompt: String,
+    state: PlayUiState,
+    viewModel: PlayViewModel
+) {
+    var text by rememberSaveable { mutableStateOf("") }
+    val canSend = text.trim().isNotEmpty() && !state.isWorking
+
+    DailyPromptCard(prompt, isQuestion = true, completed = false, modifier = Modifier.entrance(0))
+    Spacer(Modifier.height(16.dp))
+    DailyTextInput(
+        text = text,
+        onTextChange = { text = it },
+        placeholder = "Escribe tu respuesta...",
+        minLines = 4,
+        maxLines = 6,
+        modifier = Modifier.entrance(1)
+    )
     Spacer(Modifier.height(16.dp))
     DailyButton(
         label = "Enviar",
@@ -263,15 +280,26 @@ private fun DailyActionForm(
     state: PlayUiState,
     viewModel: PlayViewModel
 ) {
+    var text by rememberSaveable { mutableStateOf("") }
+
     DailyPromptCard(prompt, isQuestion = false, completed = false, modifier = Modifier.entrance(0))
-    Spacer(Modifier.height(20.dp))
+    Spacer(Modifier.height(16.dp))
+    DailyTextInput(
+        text = text,
+        onTextChange = { text = it },
+        placeholder = "Si quieres, cuéntalo aquí (opcional)",
+        minLines = 3,
+        maxLines = 5,
+        modifier = Modifier.entrance(1)
+    )
+    Spacer(Modifier.height(16.dp))
     DailyButton(
         label = "Hecho",
         icon = FeatherIcons.Check,
         enabled = !state.isWorking,
         working = state.isWorking,
-        onClick = viewModel::markActionDone,
-        modifier = Modifier.entrance(1)
+        onClick = { viewModel.markActionDone(text) },
+        modifier = Modifier.entrance(2)
     )
     Spacer(Modifier.height(18.dp))
     Text(
@@ -282,7 +310,7 @@ private fun DailyActionForm(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp)
-            .entrance(2)
+            .entrance(3)
     )
 }
 
@@ -307,16 +335,26 @@ private fun DailyWaiting(
         }
         DailyWaitNotice("Ya respondiste. Esperando al otro...", Modifier.entrance(2))
     } else {
+        val mine = state.dailyResponses.mine?.text
+        if (!mine.isNullOrBlank()) {
+            DailyAnswerCard(
+                profile = state.session?.myProfile,
+                name = "Tú",
+                text = mine,
+                modifier = Modifier.entrance(1)
+            )
+            Spacer(Modifier.height(16.dp))
+        }
         DailyButton(
             label = "Hecho",
             icon = FeatherIcons.Check,
             enabled = false,
             working = false,
             onClick = {},
-            modifier = Modifier.entrance(1)
+            modifier = Modifier.entrance(2)
         )
         Spacer(Modifier.height(24.dp))
-        DailyWaitNotice("Ya lo marcaste. Esperando al otro...", Modifier.entrance(2))
+        DailyWaitNotice("Ya lo marcaste. Esperando al otro...", Modifier.entrance(3))
     }
 }
 
@@ -328,28 +366,7 @@ private fun DailyResult(
 ) {
     DailyPromptCard(prompt, isQuestion, completed = true, modifier = Modifier.entrance(0))
     Spacer(Modifier.height(12.dp))
-    if (isQuestion) {
-        val mine = state.dailyResponses.mine?.text
-        val partner = state.dailyResponses.partner?.text
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (!mine.isNullOrBlank()) {
-                DailyAnswerCard(
-                    profile = state.session?.myProfile,
-                    name = "Tú",
-                    text = mine,
-                    modifier = Modifier.entrance(1)
-                )
-            }
-            if (!partner.isNullOrBlank()) {
-                DailyAnswerCard(
-                    profile = state.session?.partnerProfile,
-                    name = state.session?.partnerProfile?.name?.ifBlank { null } ?: "El otro",
-                    text = partner,
-                    modifier = Modifier.entrance(2)
-                )
-            }
-        }
-    } else {
+    if (!isQuestion) {
         Text(
             "Los dos lo hicieron.",
             color = CurlyColors.DarkTextSecondary,
@@ -360,6 +377,26 @@ private fun DailyResult(
                 .padding(vertical = 12.dp)
                 .entrance(1)
         )
+    }
+    val mine = state.dailyResponses.mine?.text
+    val partner = state.dailyResponses.partner?.text
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (!mine.isNullOrBlank()) {
+            DailyAnswerCard(
+                profile = state.session?.myProfile,
+                name = "Tú",
+                text = mine,
+                modifier = Modifier.entrance(1)
+            )
+        }
+        if (!partner.isNullOrBlank()) {
+            DailyAnswerCard(
+                profile = state.session?.partnerProfile,
+                name = state.session?.partnerProfile?.name?.ifBlank { null } ?: "El otro",
+                text = partner,
+                modifier = Modifier.entrance(2)
+            )
+        }
     }
     Spacer(Modifier.height(16.dp))
     Box(

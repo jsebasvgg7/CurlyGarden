@@ -152,9 +152,10 @@ private fun PlayIndexList(state: PlayUiState, viewModel: PlayViewModel) {
             PlayGameCard(
                 title = "¿Cuánto me conoces?",
                 subtitle = "5 preguntas, 4 opciones",
-                pill = "Muy pronto",
+                pill = gamePill(state, PlayGameType.KNOW_ME),
                 icon = FeatherIcons.HelpCircle,
                 color = PlaySky,
+                onClick = { viewModel.open(PlayRoute.KNOW_ME) },
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()

@@ -263,11 +263,11 @@ service cloud.firestore {
             && request.auth.uid in getAfter(dailyPath(coupleId, date)).data.answeredBy
             && request.resource.data.keys().hasOnly(['text', 'createdAt'])
             && request.resource.data.createdAt == request.time
-            && (getAfter(dailyPath(coupleId, date)).data.type == 'question'
+            && ('text' in request.resource.data
                 ? (request.resource.data.text is string
                    && request.resource.data.text.size() > 0
                    && request.resource.data.text.size() <= 140)
-                : !('text' in request.resource.data));
+                : getAfter(dailyPath(coupleId, date)).data.type == 'action');
 
           allow update, delete: if false;
         }

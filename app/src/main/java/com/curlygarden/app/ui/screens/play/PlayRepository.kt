@@ -129,10 +129,8 @@ class PlayRepository(
             val answeredBy = daily.strings("answeredBy")
             if (uid in answeredBy) return@runTransaction null
 
-            val effectiveType = if (daily.exists()) DailyType.from(daily.getString("type")) else type
-
             val response = hashMapOf<String, Any>("createdAt" to FieldValue.serverTimestamp())
-            if (effectiveType == DailyType.QUESTION) response["text"] = cleanText
+            if (cleanText.isNotEmpty()) response["text"] = cleanText
             transaction.set(responseRef, response)
 
             if (daily.exists()) {

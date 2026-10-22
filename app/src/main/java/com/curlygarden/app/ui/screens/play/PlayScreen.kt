@@ -138,14 +138,14 @@ internal fun PlayPill(text: String, filled: Boolean, modifier: Modifier = Modifi
 }
 
 @Composable
-internal fun PlayPointsPill(points: Int, modifier: Modifier = Modifier) {
+internal fun PlayPointsPill(points: Int, modifier: Modifier = Modifier, prefix: String = "") {
     Box(
         modifier = modifier
             .background(PlayAccent, RoundedCornerShape(50))
             .padding(horizontal = 22.dp, vertical = 8.dp)
     ) {
         Text(
-            "+$points puntos",
+            "$prefix+$points puntos",
             color = PlayAccentText,
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold

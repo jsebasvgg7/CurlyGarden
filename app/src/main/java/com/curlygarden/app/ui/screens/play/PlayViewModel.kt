@@ -232,8 +232,10 @@ class PlayViewModel(
         submitDaily(DailyType.QUESTION, trimmed)
     }
 
-    fun markActionDone() {
-        submitDaily(DailyType.ACTION, null)
+    fun markActionDone(text: String) {
+        val trimmed = text.trim()
+        if (trimmed.length > PLAY_ANSWER_MAX) return
+        submitDaily(DailyType.ACTION, trimmed.ifEmpty { null })
     }
 
     private fun submitDaily(expected: DailyType, text: String?) {
