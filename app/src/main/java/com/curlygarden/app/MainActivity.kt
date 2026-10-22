@@ -31,6 +31,7 @@ import com.curlygarden.app.ui.screens.couple.CoupleOnboardingScreen
 import com.curlygarden.app.ui.screens.draw.DrawFlow
 import com.curlygarden.app.ui.screens.home.HomeScreen
 import com.curlygarden.app.ui.screens.imagine.ImagineScreen
+import com.curlygarden.app.ui.screens.play.PlayScreen
 import com.curlygarden.app.ui.screens.profile.CreateProfileScreen
 import com.curlygarden.app.ui.screens.profile.ProfileScreen
 import com.curlygarden.app.ui.screens.talk.TalkScreen
@@ -146,7 +147,7 @@ fun CurlyGardenApp() {
 }
 
 private enum class HomeDestination {
-    Home, Me, Talk, Draw, Imagine, MeOnboarding, InviteOnboarding
+    Home, Me, Talk, Draw, Imagine, Play, MeOnboarding, InviteOnboarding
 }
 
 private fun HomeDestination.depth(): Int = when (this) {
@@ -191,12 +192,14 @@ private fun CurlyGardenHome(onLoggedOut: () -> Unit) {
             HomeDestination.Talk -> TalkScreen(onBack = { destination = HomeDestination.Home })
             HomeDestination.Draw -> DrawFlow(onExit = { destination = HomeDestination.Home })
             HomeDestination.Imagine -> ImagineScreen(onBack = { destination = HomeDestination.Home })
+            HomeDestination.Play -> PlayScreen(onBack = { destination = HomeDestination.Home })
             HomeDestination.Home -> HomeScreen(
                 onModuleClick = { module ->
                     when (module) {
                         "hablar" -> destination = HomeDestination.Talk
                         "dibujar" -> destination = HomeDestination.Draw
                         "imaginar" -> destination = HomeDestination.Imagine
+                        "jugar" -> destination = HomeDestination.Play
                     }
                 },
                 onProfileClick = { destination = HomeDestination.Me },
