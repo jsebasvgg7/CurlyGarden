@@ -347,6 +347,32 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      match /elevenStats/{statsUid} {
+        allow read: if belongsToCouple(coupleId);
+
+        allow create: if belongsToCouple(coupleId)
+          && statsUid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['count', 'lastDay', 'pressedAt'])
+          && request.resource.data.keys().hasAll(['count', 'lastDay', 'pressedAt'])
+          && request.resource.data.count == 1
+          && request.resource.data.lastDay is string
+          && request.resource.data.lastDay.size() == 10
+          && request.resource.data.pressedAt == request.time;
+
+        allow update: if belongsToCouple(coupleId)
+          && statsUid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['count', 'lastDay', 'pressedAt'])
+          && request.resource.data.keys().hasAll(['count', 'lastDay', 'pressedAt'])
+          && request.resource.data.count == resource.data.count + 1
+          && request.resource.data.lastDay is string
+          && request.resource.data.lastDay.size() == 10
+          && request.resource.data.lastDay != resource.data.lastDay
+          && request.resource.data.pressedAt == request.time
+          && request.time > resource.data.pressedAt + duration.value(20, 'h');
+
+        allow delete: if false;
+      }
+
       match /imagineIdeas/{entryId} {
         allow read: if belongsToCouple(coupleId);
 
