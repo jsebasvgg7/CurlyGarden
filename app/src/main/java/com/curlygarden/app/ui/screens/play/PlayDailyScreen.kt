@@ -409,7 +409,7 @@ private fun DailyAnswerCard(
 }
 
 @Composable
-private fun DailyWaitNotice(message: String, modifier: Modifier = Modifier) {
+internal fun DailyWaitNotice(message: String, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
@@ -431,7 +431,7 @@ private fun DailyWaitNotice(message: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun DailyButton(
+internal fun DailyButton(
     label: String,
     icon: ImageVector?,
     enabled: Boolean,
