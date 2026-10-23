@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.curlygarden.app.couple.CoupleActionResult
 import com.curlygarden.app.couple.CoupleRepository
 import com.curlygarden.app.data.streak.calculateStreak
+import com.curlygarden.app.ui.screens.play.PlayStats
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,8 @@ data class ProfileUiState(
     val partnerProfile: MyProfileData? = null,
     val streakDays: Int = 0,
     val daysLinked: Int = 0,
+    val level: Int = 1,
+    val levelProgress: Int = 0,
     val isUnlinking: Boolean = false,
     val unlinkError: String? = null,
     val unlinked: Boolean = false
@@ -49,12 +52,16 @@ class ProfileViewModel(
             ChronoUnit.DAYS.between(Instant.ofEpochMilli(it), Instant.now()).toInt()
         } ?: 0
 
+        val stats = PlayStats(points = firestoreData.points)
+
         ProfileUiState(
             isLoading = false,
             myProfile = firestoreData.myProfile,
             partnerProfile = firestoreData.partnerProfile,
             streakDays = calculateStreak(firestoreData.streakLog, firestoreData.timezone),
             daysLinked = daysLinked,
+            level = stats.level,
+            levelProgress = stats.progress,
             isUnlinking = unlink.isUnlinking,
             unlinkError = unlink.error,
             unlinked = unlink.unlinked

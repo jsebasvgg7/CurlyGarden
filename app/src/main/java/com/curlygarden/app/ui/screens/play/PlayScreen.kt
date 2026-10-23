@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -61,10 +62,11 @@ fun PlayScreen(onBack: () -> Unit) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (state.route) {
-            PlayRoute.INDEX, PlayRoute.ELEVEN -> PlayIndexContent(state, viewModel, onBack)
+            PlayRoute.INDEX -> PlayIndexContent(state, viewModel, onBack)
             PlayRoute.DAILY -> PlayDailyScreen(state, viewModel, onBack = { viewModel.back() })
             PlayRoute.THIS_OR_THAT -> PlayThisOrThatScreen(state, viewModel, onBack = { viewModel.back() })
             PlayRoute.KNOW_ME -> PlayKnowMeScreen(state, viewModel, onBack = { viewModel.back() })
+            PlayRoute.ELEVEN -> PlayElevenScreen(state, viewModel, onBack = { viewModel.back() })
         }
         errorMessage?.let { message ->
             PlayToast(message, Modifier.align(Alignment.BottomCenter))
@@ -77,7 +79,8 @@ internal fun PlayHeader(
     title: String,
     subtitle: String?,
     onBack: () -> Unit,
-    titleSize: TextUnit = 17.sp
+    titleSize: TextUnit = 17.sp,
+    trailing: @Composable BoxScope.() -> Unit = {}
 ) {
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -115,6 +118,10 @@ internal fun PlayHeader(
                 )
             }
         }
+        Box(
+            modifier = Modifier.align(Alignment.CenterEnd),
+            content = trailing
+        )
     }
 }
 

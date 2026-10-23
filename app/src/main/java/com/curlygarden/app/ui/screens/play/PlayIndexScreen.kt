@@ -67,6 +67,8 @@ internal fun PlayIndexContent(
     viewModel: PlayViewModel,
     onBack: () -> Unit
 ) {
+    val showEleven = !state.isLoading && !state.loadFailed && state.session?.partnerUid != null
+
     TalkBackground {
         Column(
             modifier = Modifier
@@ -79,7 +81,12 @@ internal fun PlayIndexContent(
                 title = "Jugar",
                 subtitle = "Juegos para disfrutar juntos",
                 onBack = onBack,
-                titleSize = 24.sp
+                titleSize = 24.sp,
+                trailing = {
+                    if (showEleven) {
+                        PlayElevenEntry(onClick = { viewModel.open(PlayRoute.ELEVEN) })
+                    }
+                }
             )
             Box(
                 modifier = Modifier
@@ -181,6 +188,38 @@ private fun PlayIndexList(state: PlayUiState, viewModel: PlayViewModel) {
                     }
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun PlayElevenEntry(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = CurlyColors.DarkLavenderPrimary,
+        modifier = Modifier
+            .size(44.dp)
+            .pressScale(pressedScale = 0.9f)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                "11",
+                color = Color.White,
+                fontSize = 16.sp,
+                lineHeight = 17.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clearAndSetSemantics {}
+            )
+            Icon(
+                FeatherIcons.Star,
+                contentDescription = "Pedir un deseo a las 11:11",
+                tint = Color.White,
+                modifier = Modifier.size(10.dp)
+            )
         }
     }
 }

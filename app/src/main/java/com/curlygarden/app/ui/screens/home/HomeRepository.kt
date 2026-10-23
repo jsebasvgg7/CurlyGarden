@@ -28,7 +28,8 @@ data class HomeFirestoreData(
     val timezone: String,
     val myProfile: HomeUserProfile?,
     val partnerProfile: HomeUserProfile?,
-    val latestMemory: HomeLatestMemory?
+    val latestMemory: HomeLatestMemory?,
+    val gameCount: Int = 0
 )
 
 class HomeRepository(
@@ -84,10 +85,17 @@ class HomeRepository(
         var timezone = DEFAULT_TIMEZONE
         var partner: HomeUserProfile? = null
         var latestMemory: HomeLatestMemory? = null
+        var dailyCompleted = 0
+        var gamesRevealed = 0
         var partnerListenerRegistered = false
 
         fun emitCurrent() {
-            trySend(HomeFirestoreData(streakLog, timezone, my, partner, latestMemory))
+            trySend(
+                HomeFirestoreData(
+                    streakLog, timezone, my, partner, latestMemory,
+                    gameCount = dailyCompleted + gamesRevealed
+                )
+            )
         }
 
         val coupleListener = firestore.collection("couples").document(coupleId)
@@ -140,9 +148,27 @@ class HomeRepository(
                 emitCurrent()
             }
 
+        val dailyListener = firestore.collection("couples").document(coupleId)
+            .collection("dailyChallenges")
+            .whereEqualTo("status", "completed")
+            .addSnapshotListener { snapshot, _ ->
+                dailyCompleted = snapshot?.size() ?: 0
+                emitCurrent()
+            }
+
+        val gamesListener = firestore.collection("couples").document(coupleId)
+            .collection("gameSessions")
+            .whereEqualTo("status", "revealed")
+            .addSnapshotListener { snapshot, _ ->
+                gamesRevealed = snapshot?.size() ?: 0
+                emitCurrent()
+            }
+
         awaitClose {
             coupleListener.remove()
             memoryListener.remove()
+            dailyListener.remove()
+            gamesListener.remove()
         }
     }
 

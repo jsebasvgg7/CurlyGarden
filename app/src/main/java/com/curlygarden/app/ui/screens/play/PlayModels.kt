@@ -141,7 +141,7 @@ data class ElevenClock(
 ) {
     val isCountingDown: Boolean
         get() = phase == ElevenPhase.OPEN ||
-            (phase == ElevenPhase.BEFORE && secondsLeft <= ELEVEN_WINDOW_SECONDS)
+            (phase == ElevenPhase.BEFORE && secondsLeft in 1..ELEVEN_WINDOW_SECONDS)
 }
 
 data class ElevenPodiumEntry(

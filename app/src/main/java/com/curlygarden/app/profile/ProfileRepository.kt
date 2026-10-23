@@ -27,7 +27,8 @@ data class ProfileFirestoreData(
     val streakLog: Map<String, Boolean> = emptyMap(),
     val timezone: String = DEFAULT_TIMEZONE,
     val linkedAtMillis: Long? = null,
-    val createdAtMillis: Long? = null
+    val createdAtMillis: Long? = null,
+    val points: Int = 0
 )
 
 class ProfileRepository(
@@ -105,12 +106,14 @@ class ProfileRepository(
         var timezone = DEFAULT_TIMEZONE
         var linkedAtMillis: Long? = null
         var createdAtMillis: Long? = null
+        var points = 0
         var partnerListenerRegistered = false
 
         fun emitCurrent() {
             trySend(
                 ProfileFirestoreData(
-                    my, partner, streakLog, timezone, linkedAtMillis, createdAtMillis
+                    my, partner, streakLog, timezone, linkedAtMillis, createdAtMillis,
+                    points = points
                 )
             )
         }
@@ -151,7 +154,17 @@ class ProfileRepository(
                 emitCurrent()
             }
 
-        awaitClose { coupleListener.remove() }
+        val statsListener = firestore.collection("couples").document(coupleId)
+            .collection("playStats").document(myUid)
+            .addSnapshotListener { snapshot, _ ->
+                points = snapshot?.getLong("points")?.toInt() ?: 0
+                emitCurrent()
+            }
+
+        awaitClose {
+            coupleListener.remove()
+            statsListener.remove()
+        }
     }
 
     private fun <T> flowOfSingle(value: T): Flow<T> = callbackFlow {

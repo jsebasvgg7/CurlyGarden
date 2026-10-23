@@ -15,7 +15,8 @@ data class HomeUiState(
     val weekDaysCompleted: Set<java.time.LocalDate> = emptySet(),
     val myProfile: HomeUserProfile? = null,
     val partnerProfile: HomeUserProfile? = null,
-    val latestMemory: HomeLatestMemory? = null
+    val latestMemory: HomeLatestMemory? = null,
+    val gameCount: Int = 0
 )
 
 class HomeViewModel(
@@ -30,7 +31,8 @@ class HomeViewModel(
                 weekDaysCompleted = weekDaysCompleted(data.streakLog, data.timezone),
                 myProfile = data.myProfile,
                 partnerProfile = data.partnerProfile,
-                latestMemory = data.latestMemory
+                latestMemory = data.latestMemory,
+                gameCount = data.gameCount
             )
         }
         .stateIn(

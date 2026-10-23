@@ -176,7 +176,7 @@ fun HomeScreen(
             ) {
                 PlaySpaceCard(
                     onClick = { onModuleClick("jugar") },
-                    gameCount = 0,
+                    gameCount = uiState.gameCount,
                     modifier = Modifier
                         .weight(1.1f)
                         .fillMaxHeight()

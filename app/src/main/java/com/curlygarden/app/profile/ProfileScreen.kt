@@ -95,7 +95,7 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            LevelProgressCard()
+            LevelProgressCard(level = uiState.level, progress = uiState.levelProgress)
 
             Spacer(Modifier.height(16.dp))
 
@@ -242,7 +242,7 @@ private fun ProfileAvatar(profile: MyProfileData?) {
 }
 
 @Composable
-private fun LevelProgressCard() {
+private fun LevelProgressCard(level: Int, progress: Int) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -278,14 +278,14 @@ private fun LevelProgressCard() {
                 }
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Lv. 1",
+                    "Lv. $level",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 Spacer(Modifier.width(12.dp))
                 LinearProgressIndicator(
-                    progress = { 0f },
+                    progress = { progress / 100f },
                     modifier = Modifier
                         .weight(1f)
                         .height(8.dp)
@@ -295,7 +295,7 @@ private fun LevelProgressCard() {
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    "0%",
+                    "$progress%",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = CurlyColors.DarkLavenderPrimary
