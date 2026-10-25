@@ -50,7 +50,7 @@ internal fun MemoriesIndexScreen(
         ) {
             MemoriesHeader(
                 title = "Recuerdos",
-                subtitle = "Lo que guardamos juntos",
+                subtitle = null,
                 onBack = onBack
             )
 
@@ -104,7 +104,7 @@ private fun MemoriesAlbumList(
                 album = album,
                 photos = state.data.collageFor(album.id),
                 count = state.data.countFor(album.id),
-                creator = state.profileFor(album.createdBy),
+                members = state.membersFor(album),
                 onClick = onOpenAlbum?.let { open -> { open(album.id) } },
                 onAdd = onAddToAlbum?.let { add -> { add(album.id) } }
             )

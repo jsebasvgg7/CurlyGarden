@@ -1,7 +1,6 @@
 package com.curlygarden.app.ui.screens.memories
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 
 const val MEMORIES_ALBUM_NAME_MAX = 40
 const val MEMORIES_CAPTION_MAX = 140
@@ -11,16 +10,24 @@ const val MEMORIES_COLLAGE_MAX = 4
 class PhotoTooLargeException : Exception("La foto supera los 10 MB")
 
 val MemoriesAlbumColors = listOf(
-    Color(0xFFF4B7A6),
-    Color(0xFF9BBFE0),
-    Color(0xFFBFB9FD),
-    Color(0xFFEBC27A)
+    Color(0xFFFF9A9A),
+    Color(0xFF9AAAFF),
+    Color(0xFF7FD6AE),
+    Color(0xFFF5C04A)
+)
+
+val MemoriesAlbumTints = listOf(
+    Color(0xFFFBD0D0),
+    Color(0xFFD5DBFF),
+    Color(0xFFCFEFE0),
+    Color(0xFFFBE7B0)
 )
 
 fun albumColor(index: Int): Color =
     MemoriesAlbumColors[index.coerceIn(0, MemoriesAlbumColors.lastIndex)]
 
-fun albumEdgeColor(index: Int): Color = lerp(albumColor(index), Color.Black, 0.3f)
+fun albumTint(index: Int): Color =
+    MemoriesAlbumTints[index.coerceIn(0, MemoriesAlbumTints.lastIndex)]
 
 data class MemoriesProfile(
     val uid: String = "",

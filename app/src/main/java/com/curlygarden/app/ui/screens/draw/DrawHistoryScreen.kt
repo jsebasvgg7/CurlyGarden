@@ -16,10 +16,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -37,6 +39,7 @@ import compose.icons.feathericons.Heart
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 @Composable
 fun DrawHistoryScreen(
@@ -44,6 +47,15 @@ fun DrawHistoryScreen(
     viewModel: DrawViewModel = viewModel(factory = DrawViewModelFactory())
 ) {
     val history by viewModel.history.collectAsState()
+    val saving by viewModel.savingMemoryIds.collectAsState()
+    val error by viewModel.errorMessage.collectAsState()
+
+    LaunchedEffect(error) {
+        if (error != null) {
+            delay(2500)
+            viewModel.dismissError()
+        }
+    }
 
     Box(modifier = Modifier.curlyDarkBackground()) {
         Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
@@ -80,6 +92,15 @@ fun DrawHistoryScreen(
 
             Spacer(Modifier.padding(top = 20.dp))
 
+            error?.let {
+                Text(
+                    it,
+                    color = CurlyColors.DarkLavenderLight,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+            }
+
             if (history.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
@@ -93,9 +114,8 @@ fun DrawHistoryScreen(
                     items(history, key = { it.id }) { entry ->
                         HistoryCard(
                             entry = entry,
-                            onToggleMemory = {
-                                viewModel.setSavedToMemories(entry.id, !entry.savedToMemoriesByMe)
-                            }
+                            isSaving = entry.id in saving,
+                            onSaveMemory = { viewModel.saveToMemories(entry) }
                         )
                     }
                 }
@@ -107,7 +127,8 @@ fun DrawHistoryScreen(
 @Composable
 private fun HistoryCard(
     entry: DrawHistoryEntry,
-    onToggleMemory: () -> Unit
+    isSaving: Boolean,
+    onSaveMemory: () -> Unit
 ) {
     Surface(
         shape = RoundedCornerShape(20.dp),
@@ -130,7 +151,8 @@ private fun HistoryCard(
                     )
                 }
                 Surface(
-                    onClick = onToggleMemory,
+                    onClick = onSaveMemory,
+                    enabled = !entry.savedToMemoriesByMe && !isSaving,
                     shape = CircleShape,
                     color = if (entry.savedToMemoriesByMe) {
                         CurlyColors.DarkLavenderPrimary
@@ -140,16 +162,28 @@ private fun HistoryCard(
                     modifier = Modifier.size(38.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            FeatherIcons.Heart,
-                            contentDescription = "guardar en recuerdos",
-                            tint = if (entry.savedToMemoriesByMe) {
-                                Color.White
-                            } else {
-                                CurlyColors.DarkTextSecondary
-                            },
-                            modifier = Modifier.size(18.dp)
-                        )
+                        if (isSaving) {
+                            CircularProgressIndicator(
+                                color = CurlyColors.DarkLavenderLight,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        } else {
+                            Icon(
+                                FeatherIcons.Heart,
+                                contentDescription = if (entry.savedToMemoriesByMe) {
+                                    "guardado en recuerdos"
+                                } else {
+                                    "guardar en recuerdos"
+                                },
+                                tint = if (entry.savedToMemoriesByMe) {
+                                    Color.White
+                                } else {
+                                    CurlyColors.DarkTextSecondary
+                                },
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
             }

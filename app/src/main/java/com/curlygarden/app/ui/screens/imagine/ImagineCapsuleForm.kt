@@ -255,14 +255,17 @@ private fun UnlockDateField(unlockDate: Long?, onSelected: (Long) -> Unit) {
 private val WeekdayLabels = listOf("D", "L", "M", "M", "J", "V", "S")
 
 @Composable
-private fun ImagineDatePickerDialog(
+internal fun ImagineDatePickerDialog(
     initial: LocalDate?,
     onDismiss: () -> Unit,
-    onConfirm: (LocalDate) -> Unit
+    onConfirm: (LocalDate) -> Unit,
+    pastOnly: Boolean = false
 ) {
-    val earliest = remember { LocalDate.now().plusDays(1) }
+    val today = remember { LocalDate.now() }
+    val earliest = remember { today.plusDays(1) }
     val firstMonth = remember { YearMonth.from(earliest) }
-    var month by remember { mutableStateOf(YearMonth.from(initial ?: earliest)) }
+    val lastMonth = remember { YearMonth.from(today) }
+    var month by remember { mutableStateOf(YearMonth.from(initial ?: if (pastOnly) today else earliest)) }
     var selected by remember { mutableStateOf(initial) }
 
     Dialog(
@@ -299,7 +302,7 @@ private fun ImagineDatePickerDialog(
                 ) {
                     TalkCircleButton(
                         onClick = { month = month.minusMonths(1) },
-                        enabled = month > firstMonth,
+                        enabled = pastOnly || month > firstMonth,
                         size = 34.dp
                     ) {
                         Icon(
@@ -317,6 +320,7 @@ private fun ImagineDatePickerDialog(
                     )
                     TalkCircleButton(
                         onClick = { month = month.plusMonths(1) },
+                        enabled = !pastOnly || month < lastMonth,
                         size = 34.dp
                     ) {
                         Icon(
@@ -345,7 +349,7 @@ private fun ImagineDatePickerDialog(
                         week.forEach { date ->
                             DayCell(
                                 date = date,
-                                enabled = date != null && !date.isBefore(earliest),
+                                enabled = date != null && if (pastOnly) !date.isAfter(today) else !date.isBefore(earliest),
                                 selected = date != null && date == selected,
                                 onClick = { selected = date },
                                 modifier = Modifier.weight(1f)

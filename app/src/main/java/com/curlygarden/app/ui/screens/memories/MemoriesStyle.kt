@@ -6,14 +6,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -74,28 +71,22 @@ internal fun MemoriesRingButton(
     iconTint: Color,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    Surface(
+        onClick = { onClick?.invoke() },
+        enabled = onClick != null,
+        shape = CircleShape,
+        color = color,
         modifier = modifier
             .size(size)
             .pressScale(pressedScale = 0.9f, enabled = onClick != null)
-            .border(RingWidth, color, CircleShape)
-            .padding(RingGap)
     ) {
-        Surface(
-            onClick = { onClick?.invoke() },
-            enabled = onClick != null,
-            shape = CircleShape,
-            color = color,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    icon,
-                    contentDescription = contentDescription,
-                    tint = iconTint,
-                    modifier = Modifier.size(size * 0.42f)
-                )
-            }
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                icon,
+                contentDescription = contentDescription,
+                tint = iconTint,
+                modifier = Modifier.size(size * 0.42f)
+            )
         }
     }
 }
@@ -152,7 +143,7 @@ internal fun MemoriesNavPill(
             .background(CurlyColors.DarkSurfaceElevated, CircleShape)
             .border(1.dp, MemoriesOutline, CircleShape)
             .padding(6.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         MemoriesTab.values().forEach { tab ->
@@ -172,30 +163,16 @@ private fun NavPillItem(tab: MemoriesTab, selected: Boolean, onClick: () -> Unit
         shape = CircleShape,
         color = if (selected) CurlyColors.DarkLavenderPrimary else Color.Transparent,
         modifier = Modifier
-            .height(48.dp)
-            .pressScale(pressedScale = 0.95f)
+            .size(48.dp)
+            .pressScale(pressedScale = 0.92f)
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = if (selected) 16.dp else 14.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Box(contentAlignment = Alignment.Center) {
             Icon(
                 tab.icon(),
                 contentDescription = tab.label,
                 tint = if (selected) Color.White else CurlyColors.DarkTextSecondary,
                 modifier = Modifier.size(22.dp)
             )
-            if (selected) {
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    tab.label,
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    lineHeight = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
         }
     }
 }

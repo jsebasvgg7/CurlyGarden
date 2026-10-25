@@ -68,6 +68,12 @@ data class MemoriesUiState(
         session?.myUid -> session?.myProfile
         else -> session?.partnerProfile
     }
+
+    fun membersFor(album: Album): List<MemoriesProfile?> {
+        val me = session?.myProfile
+        val partner = session?.partnerProfile
+        return if (album.createdBy == session?.myUid) listOf(me, partner) else listOf(partner, me)
+    }
 }
 
 private data class MemoriesLocal(

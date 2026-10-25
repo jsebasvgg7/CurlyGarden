@@ -1,5 +1,9 @@
 package com.curlygarden.app.ui.screens.memories
 
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -7,6 +11,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -50,7 +55,6 @@ import com.curlygarden.app.ui.screens.talk.TalkCircleButton
 import com.curlygarden.app.ui.theme.CurlyColors
 import compose.icons.FeatherIcons
 import compose.icons.feathericons.ArrowLeft
-import compose.icons.feathericons.Image
 import compose.icons.feathericons.Plus
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -58,29 +62,16 @@ import java.util.Locale
 
 internal val MemoriesInk = Color(0xFF26215C)
 
-private val CollageHeight = 216.dp
+private val CollageHeight = 160.dp
+private val StripHeight = 64.dp
+private val StripShape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+private val PhotoOverlap = 8.dp
+private val PhotoRotations = listOf(-4f, 3f, -3f, 4f)
+private val PhotoDrops = listOf(10.dp, 4.dp, 14.dp, 6.dp)
+private val PhotoScales = mapOf(1 to 1.3f, 2 to 1.2f, 3 to 1.1f, 4 to 1f)
+private const val PhotoRatio = 1.12f
+private const val BlurSourcePx = 24
 private val dateFormat = SimpleDateFormat("d MMM yyyy", Locale("es"))
-
-private class CollageSlot(val x: Float, val y: Float, val width: Float, val rotation: Float)
-
-private val CollageLayouts: Map<Int, List<CollageSlot>> = mapOf(
-    1 to listOf(CollageSlot(0.25f, 14f, 0.50f, -2f)),
-    2 to listOf(
-        CollageSlot(0.08f, 30f, 0.44f, -4f),
-        CollageSlot(0.46f, 24f, 0.44f, 3f)
-    ),
-    3 to listOf(
-        CollageSlot(0.06f, 28f, 0.40f, -4f),
-        CollageSlot(0.36f, 44f, 0.36f, 2.5f),
-        CollageSlot(0.62f, 14f, 0.32f, 4f)
-    ),
-    4 to listOf(
-        CollageSlot(0.04f, 26f, 0.38f, -4f),
-        CollageSlot(0.30f, 40f, 0.36f, 2.5f),
-        CollageSlot(0.60f, 10f, 0.34f, 4f),
-        CollageSlot(0.66f, 62f, 0.30f, -3f)
-    )
-)
 
 internal fun formatMemoryDate(timestamp: Long): String =
     if (timestamp == Long.MAX_VALUE) "guardando…" else dateFormat.format(Date(timestamp)).replace(".", "")
@@ -94,9 +85,11 @@ internal fun MemoriesDepthCard(
     shape: Shape,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    rimColor: Color = lerp(color, Color.Black, 0.35f),
+    rimWidth: Dp = 1.dp,
     content: @Composable () -> Unit
 ) {
-    val rim = BorderStroke(1.dp, lerp(color, Color.Black, 0.35f))
+    val rim = BorderStroke(rimWidth, rimColor)
     val surfaceModifier = modifier.fillMaxWidth()
 
     if (onClick != null) {
@@ -153,7 +146,7 @@ internal fun MemoriesAlbumCard(
     album: Album,
     photos: List<Memory>,
     count: Int,
-    creator: MemoriesProfile?,
+    members: List<MemoriesProfile?>,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     onAdd: (() -> Unit)? = null
@@ -180,39 +173,41 @@ internal fun MemoriesAlbumCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(CollageHeight)
-                .background(CurlyColors.DarkSurface, cardShape)
-                .border(1.dp, MemoriesOutline, cardShape)
+                .background(albumTint(album.colorIndex), cardShape)
                 .clip(cardShape)
         ) {
-            if (photos.isEmpty()) {
+            if (photos.isNotEmpty()) {
+                MemoriesCollage(photos)
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 24.dp)
-                        .size(72.dp)
-                        .background(CurlyColors.DarkSurfaceElevated, CircleShape),
-                    contentAlignment = Alignment.Center
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(StripHeight)
+                        .clip(StripShape)
+                        .background(albumTint(album.colorIndex))
                 ) {
-                    Icon(
-                        FeatherIcons.Image,
-                        contentDescription = null,
-                        tint = CurlyColors.DarkLavenderLight.copy(alpha = 0.6f),
-                        modifier = Modifier.size(32.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .fillMaxWidth()
+                            .requiredHeight(CollageHeight)
+                    ) {
+                        MemoriesCollage(photos, blurred = true)
+                    }
                 }
-            } else {
-                MemoriesCollage(photos)
             }
 
             MemoriesDepthCard(
-                color = albumColor(album.colorIndex),
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                color = albumColor(album.colorIndex).copy(alpha = if (photos.isEmpty()) 1f else 0.78f),
+                shape = StripShape,
+                rimColor = CurlyColors.DarkBackground,
+                rimWidth = 2.dp,
                 modifier = Modifier.align(Alignment.BottomCenter)
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(64.dp)
+                        .height(StripHeight)
                 ) {
                     MemoriesRingButton(
                         icon = FeatherIcons.Plus,
@@ -241,52 +236,76 @@ internal fun MemoriesAlbumCard(
             modifier = Modifier.padding(horizontal = 16.dp)
         )
         Spacer(Modifier.height(4.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            MemoriesAvatar(creator, 20.dp)
-            Spacer(Modifier.width(8.dp))
-            Text(
-                "${formatMemoryDate(album.createdAt)} · ${memoriesCountLabel(count)}",
-                color = CurlyColors.DarkLavenderLight,
-                fontSize = 13.sp,
-                lineHeight = 18.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+        Text(
+            "${formatMemoryDate(album.createdAt)} · ${memoriesCountLabel(count)}",
+            color = CurlyColors.DarkLavenderLight,
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy((-8).dp)) {
+            members.forEach { member ->
+                MemoriesAvatar(
+                    member,
+                    28.dp,
+                    Modifier.border(2.dp, CurlyColors.DarkBackground, CircleShape)
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun MemoriesCollage(photos: List<Memory>) {
-    val slots = CollageLayouts.getValue(photos.size.coerceIn(1, MEMORIES_COLLAGE_MAX))
+private fun MemoriesCollage(photos: List<Memory>, blurred: Boolean = false) {
+    val count = photos.size.coerceIn(1, MEMORIES_COLLAGE_MAX)
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        slots.forEachIndexed { index, slot ->
-            val photoWidth = maxWidth * slot.width
+        val base = (maxWidth - 24.dp + PhotoOverlap * 3) / 4
+        val photoWidth = base * PhotoScales.getValue(count)
+        val photoHeight = photoWidth * PhotoRatio
+        val step = photoWidth - PhotoOverlap
+        val startX = (maxWidth - (photoWidth + step * (count - 1))) / 2
+        photos.take(count).forEachIndexed { index, memory ->
             CollagePhoto(
-                url = photos[index].photoUrl,
+                url = memory.photoUrl,
+                blurred = blurred,
                 modifier = Modifier
-                    .offset(x = maxWidth * slot.x, y = slot.y.dp)
-                    .size(width = photoWidth, height = photoWidth * 0.72f)
-                    .graphicsLayer { rotationZ = slot.rotation }
+                    .offset(x = startX + step * index, y = PhotoDrops[index])
+                    .size(width = photoWidth, height = photoHeight)
+                    .graphicsLayer { rotationZ = PhotoRotations[index] }
             )
         }
     }
 }
 
 @Composable
-private fun CollagePhoto(url: String, modifier: Modifier) {
-    Box(
-        modifier = modifier
-            .background(Color.White, RoundedCornerShape(10.dp))
-            .padding(3.dp)
-            .clip(RoundedCornerShape(8.dp))
-    ) {
+private fun CollagePhoto(url: String, blurred: Boolean, modifier: Modifier) {
+    if (blurred) {
         AsyncImage(
-            model = url,
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(url)
+                .size(BlurSourcePx)
+                .build(),
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
+            filterQuality = FilterQuality.Medium,
+            modifier = modifier.clip(RoundedCornerShape(10.dp))
         )
+    } else {
+        Box(
+            modifier = modifier
+                .background(Color.White, RoundedCornerShape(10.dp))
+                .padding(3.dp)
+                .clip(RoundedCornerShape(8.dp))
+        ) {
+            AsyncImage(
+                model = url,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     }
 }
 

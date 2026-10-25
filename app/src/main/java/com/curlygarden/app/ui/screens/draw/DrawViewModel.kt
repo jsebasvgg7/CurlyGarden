@@ -2,6 +2,7 @@ package com.curlygarden.app.ui.screens.draw
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.curlygarden.app.ui.screens.memories.MemoriesRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -37,6 +38,7 @@ data class DrawUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 class DrawViewModel(
     private val repository: DrawRepository = DrawRepository(),
+    private val memoriesRepository: MemoriesRepository = MemoriesRepository(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) : ViewModel() {
@@ -49,6 +51,9 @@ class DrawViewModel(
 
     private val _isSavingDrawing = MutableStateFlow(false)
     val isSavingDrawing: StateFlow<Boolean> = _isSavingDrawing.asStateFlow()
+
+    private val _savingMemoryIds = MutableStateFlow<Set<String>>(emptySet())
+    val savingMemoryIds: StateFlow<Set<String>> = _savingMemoryIds.asStateFlow()
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
@@ -113,12 +118,28 @@ class DrawViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun setSavedToMemories(entryId: String, saved: Boolean) {
+    fun saveToMemories(entry: DrawHistoryEntry) {
         val session = sessionFlow.value ?: return
+        if (entry.savedToMemoriesByMe || entry.id in _savingMemoryIds.value) return
+        if (entry.myStrokes.isEmpty()) {
+            _errorMessage.value = "No hay dibujo para guardar"
+            return
+        }
+
         viewModelScope.launch {
+            _savingMemoryIds.value = _savingMemoryIds.value + entry.id
             runCatching {
-                repository.setSavedToMemories(session.first, session.second, entryId, saved)
-            }.onFailure { _errorMessage.value = "No se pudo actualizar recuerdos" }
+                val photo = rasterizeDrawing(entry.myStrokes)
+                memoriesRepository.createMemory(
+                    coupleId = session.first,
+                    photo = photo,
+                    caption = entry.topicForMe.orEmpty(),
+                    dateMillis = entry.createdAt.takeIf { it > 0L } ?: System.currentTimeMillis(),
+                    albumId = null
+                )
+                repository.setSavedToMemories(session.first, session.second, entry.id, true)
+            }.onFailure { _errorMessage.value = "No se pudo guardar en recuerdos" }
+            _savingMemoryIds.value = _savingMemoryIds.value - entry.id
         }
     }
 

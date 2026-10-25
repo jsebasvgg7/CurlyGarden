@@ -136,9 +136,9 @@ class HomeRepository(
         val memoryListener = firestore.collection("couples").document(coupleId)
             .collection("memories")
             .orderBy("date", Query.Direction.DESCENDING)
-            .limit(1)
+            .limit(10)
             .addSnapshotListener { snapshot, _ ->
-                val doc = snapshot?.documents?.firstOrNull()
+                val doc = snapshot?.documents?.firstOrNull { it.getBoolean("hidden") != true }
                 latestMemory = doc?.let {
                     HomeLatestMemory(
                         caption = it.getString("caption"),

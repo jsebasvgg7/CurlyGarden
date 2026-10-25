@@ -38,8 +38,10 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.curlygarden.app.ui.animation.pressScale
 import com.curlygarden.app.ui.screens.talk.TalkBackground
+import com.curlygarden.app.ui.screens.talk.TalkCircleButton
 import com.curlygarden.app.ui.theme.CurlyColors
 import compose.icons.FeatherIcons
+import compose.icons.feathericons.Home
 import compose.icons.feathericons.Image
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -48,7 +50,8 @@ internal fun MemoriesAlbumScreen(
     state: MemoriesUiState,
     onBack: () -> Unit,
     onOpenMemory: (String) -> Unit,
-    onAdd: () -> Unit = {}
+    onAdd: () -> Unit = {},
+    onHome: () -> Unit = {}
 ) {
     val album = state.album
     val items = state.shownMemories
@@ -69,7 +72,17 @@ internal fun MemoriesAlbumScreen(
             MemoriesHeader(
                 title = title,
                 subtitle = subtitle,
-                onBack = onBack
+                onBack = onBack,
+                trailing = {
+                    TalkCircleButton(onClick = onHome) {
+                        Icon(
+                            FeatherIcons.Home,
+                            contentDescription = "inicio",
+                            tint = CurlyColors.DarkTextPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             )
 
             Box(
@@ -161,7 +174,7 @@ private fun MemoriesAlbumEmpty(hidden: Boolean, isAlbum: Boolean, onAdd: () -> U
         verticalArrangement = Arrangement.Center
     ) {
         MemoriesDepthCard(
-            color = albumColor(2),
+            color = albumColor(1),
             shape = RoundedCornerShape(26.dp),
             modifier = Modifier.fillMaxWidth()
         ) {

@@ -24,9 +24,11 @@ fun MemoriesScreen(onBack: () -> Unit) {
     val state by viewModel.uiState.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     var showAlbumDialog by remember { mutableStateOf(false) }
+    var showMemoryDialog by remember { mutableStateOf(false) }
+    var memoryAlbumId by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(errorMessage, showAlbumDialog) {
-        if (errorMessage != null && !showAlbumDialog) {
+    LaunchedEffect(errorMessage, showAlbumDialog, showMemoryDialog) {
+        if (errorMessage != null && !showAlbumDialog && !showMemoryDialog) {
             delay(2500)
             viewModel.dismissError()
         }
@@ -43,12 +45,23 @@ fun MemoriesScreen(onBack: () -> Unit) {
                     viewModel.dismissError()
                     showAlbumDialog = true
                 },
-                onOpenAlbum = viewModel::openAlbum
+                onOpenAlbum = viewModel::openAlbum,
+                onAddToAlbum = { albumId ->
+                    viewModel.dismissError()
+                    memoryAlbumId = albumId
+                    showMemoryDialog = true
+                }
             )
             MemoriesRoute.ALBUM -> MemoriesAlbumScreen(
                 state = state,
                 onBack = { viewModel.back() },
-                onOpenMemory = viewModel::openMemory
+                onOpenMemory = viewModel::openMemory,
+                onAdd = {
+                    viewModel.dismissError()
+                    memoryAlbumId = state.albumId
+                    showMemoryDialog = true
+                },
+                onHome = onBack
             )
             MemoriesRoute.DETAIL -> MemoriesDetailScreen(
                 state = state,
@@ -84,6 +97,22 @@ fun MemoriesScreen(onBack: () -> Unit) {
                 onDismiss = {
                     viewModel.dismissError()
                     showAlbumDialog = false
+                }
+            )
+        } else if (showMemoryDialog) {
+            MemoriesMemoryDialog(
+                albums = state.data.albums,
+                initialAlbumId = memoryAlbumId,
+                isWorking = state.isWorking,
+                error = errorMessage,
+                onSave = { photo, caption, dateMillis, albumId ->
+                    viewModel.createMemory(photo, caption, dateMillis, albumId) {
+                        showMemoryDialog = false
+                    }
+                },
+                onDismiss = {
+                    viewModel.dismissError()
+                    showMemoryDialog = false
                 }
             )
         } else {
