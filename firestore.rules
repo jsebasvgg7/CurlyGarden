@@ -166,6 +166,38 @@ service cloud.firestore {
         && request.resource.data.scored == resource.data.scored.concat([request.auth.uid]);
     }
 
+    function validMemory(data) {
+      return data.keys().hasOnly(
+          ['photoUrl', 'caption', 'date', 'aspectRatio', 'albumId', 'createdBy', 'hidden', 'createdAt']
+        )
+        && data.keys().hasAll(
+          ['photoUrl', 'caption', 'date', 'aspectRatio', 'createdBy', 'hidden', 'createdAt']
+        )
+        && data.photoUrl is string && data.photoUrl.size() > 0
+        && data.caption is string && data.caption.size() <= 140
+        && data.date is timestamp
+        && data.aspectRatio is number && data.aspectRatio > 0
+        && (!('albumId' in data) || (data.albumId is string && data.albumId.size() > 0))
+        && data.createdBy == request.auth.uid
+        && data.hidden == false
+        && data.createdAt == request.time;
+    }
+
+    function isHideToggle() {
+      return onlyChanges(['hidden'])
+        && request.resource.data.hidden is bool;
+    }
+
+    function validAlbum(data) {
+      return data.keys().hasOnly(['name', 'colorIndex', 'coverPhotoUrl', 'createdBy', 'createdAt'])
+        && data.keys().hasAll(['name', 'colorIndex', 'createdBy', 'createdAt'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 40
+        && data.colorIndex is int && data.colorIndex >= 0 && data.colorIndex <= 3
+        && (!('coverPhotoUrl' in data) || data.coverPhotoUrl is string)
+        && data.createdBy == request.auth.uid
+        && data.createdAt == request.time;
+    }
+
     match /users/{userId} {
       allow read: if isMe(userId) || sharesCoupleWith(resource.data);
       allow create: if isMe(userId);
@@ -488,13 +520,17 @@ service cloud.firestore {
       match /memories/{memoryId} {
         allow read: if belongsToCouple(coupleId);
         allow create: if belongsToCouple(coupleId)
-          && request.resource.data.createdBy == request.auth.uid;
-        allow update, delete: if belongsToCouple(coupleId);
+          && validMemory(request.resource.data);
+        allow update: if belongsToCouple(coupleId)
+          && isHideToggle();
+        allow delete: if false;
       }
 
       match /albums/{albumId} {
         allow read: if belongsToCouple(coupleId);
-        allow write: if belongsToCouple(coupleId);
+        allow create: if belongsToCouple(coupleId)
+          && validAlbum(request.resource.data);
+        allow update, delete: if false;
       }
     }
 

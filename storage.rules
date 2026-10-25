@@ -28,5 +28,15 @@ service firebase.storage {
       allow update: if false;
       allow delete: if false;
     }
+
+    match /memory_photos/{coupleId}/{memoryId}/{fileName} {
+      allow read: if isSignedIn() && myCoupleId() == coupleId;
+      allow create: if isSignedIn()
+        && myCoupleId() == coupleId
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow update: if false;
+      allow delete: if false;
+    }
   }
 }
