@@ -7,6 +7,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -17,9 +23,10 @@ fun MemoriesScreen(onBack: () -> Unit) {
     val viewModel: MemoriesViewModel = viewModel(factory = MemoriesViewModelFactory())
     val state by viewModel.uiState.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    var showAlbumDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(errorMessage) {
-        if (errorMessage != null) {
+    LaunchedEffect(errorMessage, showAlbumDialog) {
+        if (errorMessage != null && !showAlbumDialog) {
             delay(2500)
             viewModel.dismissError()
         }
@@ -32,13 +39,16 @@ fun MemoriesScreen(onBack: () -> Unit) {
             MemoriesRoute.INDEX -> MemoriesIndexScreen(
                 state = state,
                 onBack = onBack,
+                onNewAlbum = {
+                    viewModel.dismissError()
+                    showAlbumDialog = true
+                },
                 onOpenAlbum = viewModel::openAlbum
             )
             MemoriesRoute.ALBUM -> MemoriesAlbumScreen(
                 state = state,
                 onBack = { viewModel.back() },
-                onOpenMemory = viewModel::openMemory,
-                onToggleHidden = viewModel::setShowHidden
+                onOpenMemory = viewModel::openMemory
             )
             MemoriesRoute.DETAIL -> MemoriesDetailScreen(
                 state = state,
@@ -48,8 +58,38 @@ fun MemoriesScreen(onBack: () -> Unit) {
                 }
             )
         }
-        errorMessage?.let { message ->
-            MemoriesToast(message, Modifier.align(Alignment.BottomCenter))
+        val tab = state.tab
+        val showNav = tab != null &&
+            !state.isLoading &&
+            state.hasPartner &&
+            !state.loadFailed &&
+            !(state.route == MemoriesRoute.INDEX && state.data.albums.isEmpty())
+        if (tab != null && showNav) {
+            MemoriesNavPill(
+                selected = tab,
+                onSelect = viewModel::selectTab,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .navigationBarsPadding()
+                    .padding(start = 20.dp, bottom = 34.dp)
+            )
+        }
+        if (showAlbumDialog) {
+            MemoriesAlbumDialog(
+                isWorking = state.isWorking,
+                error = errorMessage,
+                onCreate = { name, colorIndex ->
+                    viewModel.createAlbum(name, colorIndex) { showAlbumDialog = false }
+                },
+                onDismiss = {
+                    viewModel.dismissError()
+                    showAlbumDialog = false
+                }
+            )
+        } else {
+            errorMessage?.let { message ->
+                MemoriesToast(message, Modifier.align(Alignment.BottomCenter))
+            }
         }
     }
 }

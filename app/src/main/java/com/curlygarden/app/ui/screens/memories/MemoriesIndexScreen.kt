@@ -16,12 +16,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -31,7 +27,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.curlygarden.app.ui.animation.pressScale
 import com.curlygarden.app.ui.screens.talk.TalkBackground
 import com.curlygarden.app.ui.theme.CurlyColors
 import compose.icons.FeatherIcons
@@ -76,7 +71,7 @@ internal fun MemoriesIndexScreen(
                         "Todavía no tienes a nadie vinculado. Invita a alguien para guardar recuerdos."
                     )
                     state.loadFailed -> MemoriesNotice("No se pudieron cargar los recuerdos")
-                    state.data.albums.isEmpty() && state.data.countFor(null) == 0 ->
+                    state.data.albums.isEmpty() ->
                         MemoriesEmpty(onCreate = onNewAlbum)
                     else -> {
                         MemoriesAlbumList(state, onOpenAlbum, onAddToAlbum)
@@ -101,15 +96,9 @@ private fun MemoriesAlbumList(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 20.dp, bottom = 104.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(top = 16.dp, bottom = 112.dp),
+        verticalArrangement = Arrangement.spacedBy(32.dp)
     ) {
-        item(key = "all") {
-            MemoriesAllCard(
-                count = state.data.countFor(null),
-                onClick = onOpenAlbum?.let { open -> { open(null) } }
-            )
-        }
         items(state.data.albums, key = { it.id }) { album ->
             MemoriesAlbumCard(
                 album = album,
@@ -151,30 +140,11 @@ private fun MemoriesEmpty(onCreate: () -> Unit) {
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(28.dp))
-        MemoriesDepthCard(
-            color = CurlyColors.DarkLavenderPrimary,
-            shape = RoundedCornerShape(18.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp)
-                .pressScale(pressedScale = 0.97f),
-            onClick = onCreate
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    "Crear mi primer álbum",
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    lineHeight = 21.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
+        MemoriesPrimaryButton(
+            text = "Crear mi primer álbum",
+            onClick = onCreate,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
     }
 }
 
@@ -184,23 +154,15 @@ internal fun MemoriesFab(
     modifier: Modifier = Modifier,
     description: String = "Nuevo álbum"
 ) {
-    Surface(
+    MemoriesRingButton(
+        icon = FeatherIcons.Plus,
+        contentDescription = description,
         onClick = onClick,
-        shape = CircleShape,
+        size = 64.dp,
         color = CurlyColors.DarkLavenderPrimary,
+        iconTint = Color.White,
         modifier = modifier
-            .size(60.dp)
-            .pressScale(pressedScale = 0.9f)
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                FeatherIcons.Plus,
-                contentDescription = description,
-                tint = Color.White,
-                modifier = Modifier.size(28.dp)
-            )
-        }
-    }
+    )
 }
 
 @Composable

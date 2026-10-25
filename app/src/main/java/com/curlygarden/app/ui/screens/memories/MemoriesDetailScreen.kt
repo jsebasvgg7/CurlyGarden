@@ -147,7 +147,7 @@ private fun MemoryInfoCard(memory: Memory, album: Album?, author: MemoriesProfil
     Surface(
         shape = RoundedCornerShape(24.dp),
         color = CurlyColors.DarkSurface,
-        border = BorderStroke(1.dp, CurlyColors.DarkLavenderLight.copy(alpha = 0.4f)),
+        border = BorderStroke(1.dp, MemoriesOutline),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(24.dp)) {

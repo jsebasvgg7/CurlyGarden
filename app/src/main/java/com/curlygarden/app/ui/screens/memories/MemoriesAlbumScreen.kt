@@ -38,11 +38,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.curlygarden.app.ui.animation.pressScale
 import com.curlygarden.app.ui.screens.talk.TalkBackground
-import com.curlygarden.app.ui.screens.talk.TalkCircleButton
 import com.curlygarden.app.ui.theme.CurlyColors
 import compose.icons.FeatherIcons
-import compose.icons.feathericons.Eye
-import compose.icons.feathericons.EyeOff
 import compose.icons.feathericons.Image
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -51,15 +48,12 @@ internal fun MemoriesAlbumScreen(
     state: MemoriesUiState,
     onBack: () -> Unit,
     onOpenMemory: (String) -> Unit,
-    onToggleHidden: (Boolean) -> Unit,
     onAdd: () -> Unit = {}
 ) {
     val album = state.album
     val items = state.shownMemories
-    val scope = album?.name ?: "Todos los recuerdos"
-    val title = if (state.showHidden) "Ocultos" else scope
+    val title = if (state.showHidden) "Ocultos" else album?.name ?: "Todos los recuerdos"
     val subtitle = when {
-        state.showHidden -> "$scope · ${memoriesCountLabel(items.size)}"
         album != null -> "${memoriesCountLabel(items.size)} · ${formatMemoryDate(album.createdAt)}"
         else -> memoriesCountLabel(items.size)
     }
@@ -75,13 +69,7 @@ internal fun MemoriesAlbumScreen(
             MemoriesHeader(
                 title = title,
                 subtitle = subtitle,
-                onBack = onBack,
-                trailing = {
-                    HiddenToggle(
-                        showHidden = state.showHidden,
-                        onClick = { onToggleHidden(!state.showHidden) }
-                    )
-                }
+                onBack = onBack
             )
 
             Box(
@@ -99,7 +87,7 @@ internal fun MemoriesAlbumScreen(
                     LazyVerticalStaggeredGrid(
                         columns = StaggeredGridCells.Fixed(2),
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(top = 20.dp, bottom = 104.dp),
+                        contentPadding = PaddingValues(top = 20.dp, bottom = 112.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalItemSpacing = 12.dp
                     ) {
@@ -119,27 +107,6 @@ internal fun MemoriesAlbumScreen(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun HiddenToggle(showHidden: Boolean, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        TalkCircleButton(onClick = onClick) {
-            Icon(
-                if (showHidden) FeatherIcons.Eye else FeatherIcons.EyeOff,
-                contentDescription = if (showHidden) "Ver recuerdos" else "Ver ocultos",
-                tint = if (showHidden) CurlyColors.DarkLavenderLight else CurlyColors.DarkTextPrimary,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-        Spacer(Modifier.height(2.dp))
-        Text(
-            if (showHidden) "Ver" else "Ocultos",
-            color = CurlyColors.DarkLavenderLight,
-            fontSize = 11.sp,
-            lineHeight = 14.sp
-        )
     }
 }
 
@@ -204,16 +171,11 @@ private fun MemoriesAlbumEmpty(hidden: Boolean, isAlbum: Boolean, onAdd: () -> U
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .background(MemoriesInk.copy(alpha = 0.15f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
+                MemoriesRingBadge(size = 72.dp, color = MemoriesInk) {
                     Icon(
                         FeatherIcons.Image,
                         contentDescription = null,
-                        tint = MemoriesInk,
+                        tint = Color.White,
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -238,7 +200,7 @@ private fun MemoriesAlbumEmpty(hidden: Boolean, isAlbum: Boolean, onAdd: () -> U
                     Spacer(Modifier.height(24.dp))
                     Surface(
                         onClick = onAdd,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = CircleShape,
                         color = MemoriesInk,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -247,14 +209,14 @@ private fun MemoriesAlbumEmpty(hidden: Boolean, isAlbum: Boolean, onAdd: () -> U
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 14.dp),
+                                .padding(vertical = 16.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 "Agregar recuerdo",
                                 color = Color.White,
-                                fontSize = 14.sp,
-                                lineHeight = 20.sp,
+                                fontSize = 16.sp,
+                                lineHeight = 21.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }

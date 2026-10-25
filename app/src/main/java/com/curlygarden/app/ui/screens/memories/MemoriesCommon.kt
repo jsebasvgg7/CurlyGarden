@@ -5,6 +5,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -25,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,7 +50,6 @@ import com.curlygarden.app.ui.screens.talk.TalkCircleButton
 import com.curlygarden.app.ui.theme.CurlyColors
 import compose.icons.FeatherIcons
 import compose.icons.feathericons.ArrowLeft
-import compose.icons.feathericons.ChevronRight
 import compose.icons.feathericons.Image
 import compose.icons.feathericons.Plus
 import java.text.SimpleDateFormat
@@ -57,8 +58,7 @@ import java.util.Locale
 
 internal val MemoriesInk = Color(0xFF26215C)
 
-private val EdgeHeight = 5.dp
-private val CollageHeight = 210.dp
+private val CollageHeight = 216.dp
 private val dateFormat = SimpleDateFormat("d MMM yyyy", Locale("es"))
 
 private class CollageSlot(val x: Float, val y: Float, val width: Float, val rotation: Float)
@@ -96,37 +96,26 @@ internal fun MemoriesDepthCard(
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
-    val edge = lerp(color, Color.Black, 0.3f)
-    val rim = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
-    val surfaceModifier = Modifier
-        .fillMaxWidth()
-        .padding(bottom = EdgeHeight)
+    val rim = BorderStroke(1.dp, lerp(color, Color.Black, 0.35f))
+    val surfaceModifier = modifier.fillMaxWidth()
 
-    Box(modifier = modifier) {
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .padding(top = EdgeHeight)
-                .background(edge, shape)
+    if (onClick != null) {
+        Surface(
+            onClick = onClick,
+            shape = shape,
+            color = color,
+            border = rim,
+            modifier = surfaceModifier,
+            content = content
         )
-        if (onClick != null) {
-            Surface(
-                onClick = onClick,
-                shape = shape,
-                color = color,
-                border = rim,
-                modifier = surfaceModifier,
-                content = content
-            )
-        } else {
-            Surface(
-                shape = shape,
-                color = color,
-                border = rim,
-                modifier = surfaceModifier,
-                content = content
-            )
-        }
+    } else {
+        Surface(
+            shape = shape,
+            color = color,
+            border = rim,
+            modifier = surfaceModifier,
+            content = content
+        )
     }
 }
 
@@ -160,61 +149,6 @@ internal fun MemoriesAvatar(profile: MemoriesProfile?, size: Dp, modifier: Modif
 }
 
 @Composable
-internal fun MemoriesAllCard(
-    count: Int,
-    modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null
-) {
-    MemoriesDepthCard(
-        color = albumColor(2),
-        shape = RoundedCornerShape(22.dp),
-        modifier = modifier.pressScale(pressedScale = 0.98f, enabled = onClick != null),
-        onClick = onClick
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .background(CurlyColors.DarkLavenderPrimary, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    FeatherIcons.Image,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "Todos los recuerdos",
-                    color = MemoriesInk,
-                    fontSize = 16.sp,
-                    lineHeight = 21.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    memoriesCountLabel(count),
-                    color = MemoriesInk.copy(alpha = 0.75f),
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp
-                )
-            }
-            Icon(
-                FeatherIcons.ChevronRight,
-                contentDescription = null,
-                tint = MemoriesInk,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-    }
-}
-
-@Composable
 internal fun MemoriesAlbumCard(
     album: Album,
     photos: List<Memory>,
@@ -225,25 +159,36 @@ internal fun MemoriesAlbumCard(
     onAdd: (() -> Unit)? = null
 ) {
     val cardShape = RoundedCornerShape(26.dp)
-    Box(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .pressScale(pressedScale = 0.97f, enabled = onClick != null)
-            .background(CurlyColors.DarkSurface, cardShape)
-            .border(1.dp, CurlyColors.DarkLavenderLight.copy(alpha = 0.4f), cardShape)
-            .clip(cardShape)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onClick
+                    )
+                } else {
+                    Modifier
+                }
+            ),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(CollageHeight)
+                .background(CurlyColors.DarkSurface, cardShape)
+                .border(1.dp, MemoriesOutline, cardShape)
+                .clip(cardShape)
         ) {
             if (photos.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = 28.dp)
+                        .padding(top = 24.dp)
                         .size(72.dp)
                         .background(CurlyColors.DarkSurfaceElevated, CircleShape),
                     contentAlignment = Alignment.Center
@@ -261,58 +206,52 @@ internal fun MemoriesAlbumCard(
 
             MemoriesDepthCard(
                 color = albumColor(album.colorIndex),
-                shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                 modifier = Modifier.align(Alignment.BottomCenter)
             ) {
-                Row(
-                    modifier = Modifier.padding(start = 18.dp, end = 14.dp, top = 14.dp, bottom = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            album.name,
-                            color = MemoriesInk,
-                            fontSize = 17.sp,
-                            lineHeight = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            MemoriesAvatar(creator, 22.dp)
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                "${formatMemoryDate(album.createdAt)} · ${memoriesCountLabel(count)}",
-                                color = MemoriesInk.copy(alpha = 0.75f),
-                                fontSize = 12.sp,
-                                lineHeight = 16.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    Surface(
-                        onClick = { onAdd?.invoke() },
-                        enabled = onAdd != null,
-                        shape = CircleShape,
-                        color = Color.White,
+                    MemoriesRingButton(
+                        icon = FeatherIcons.Plus,
+                        contentDescription = "Agregar recuerdo",
+                        onClick = onAdd,
+                        size = 44.dp,
+                        color = MemoriesInk,
+                        iconTint = Color.White,
                         modifier = Modifier
-                            .size(40.dp)
-                            .pressScale(pressedScale = 0.9f, enabled = onAdd != null)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                FeatherIcons.Plus,
-                                contentDescription = "Agregar recuerdo",
-                                tint = MemoriesInk,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 12.dp)
+                    )
                 }
             }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            album.name,
+            color = CurlyColors.DarkTextPrimary,
+            fontSize = 18.sp,
+            lineHeight = 24.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        Spacer(Modifier.height(4.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MemoriesAvatar(creator, 20.dp)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "${formatMemoryDate(album.createdAt)} · ${memoriesCountLabel(count)}",
+                color = CurlyColors.DarkLavenderLight,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -495,14 +434,13 @@ internal fun MemoriesHeader(
             Text(
                 title,
                 color = CurlyColors.DarkTextPrimary,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Medium,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             if (subtitle != null) {
-                Spacer(Modifier.height(2.dp))
                 Text(
                     subtitle,
                     color = CurlyColors.DarkLavenderLight,

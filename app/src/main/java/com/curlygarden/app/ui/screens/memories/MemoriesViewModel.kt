@@ -17,6 +17,12 @@ import kotlinx.coroutines.launch
 
 enum class MemoriesRoute { INDEX, ALBUM, DETAIL }
 
+enum class MemoriesTab(val label: String) {
+    ALBUMS("Álbumes"),
+    ALL("Todos"),
+    HIDDEN("Ocultos")
+}
+
 data class MemoriesNav(
     val route: MemoriesRoute = MemoriesRoute.INDEX,
     val albumId: String? = null,
@@ -37,6 +43,14 @@ data class MemoriesUiState(
 ) {
     val hasPartner: Boolean
         get() = session?.partnerUid != null
+
+    val tab: MemoriesTab?
+        get() = when {
+            route == MemoriesRoute.INDEX -> MemoriesTab.ALBUMS
+            route == MemoriesRoute.ALBUM && albumId == null ->
+                if (showHidden) MemoriesTab.HIDDEN else MemoriesTab.ALL
+            else -> null
+        }
 
     val album: Album?
         get() = albumId?.let { data.album(it) }
@@ -123,8 +137,12 @@ class MemoriesViewModel(
         nav.value = MemoriesNav(route = MemoriesRoute.ALBUM, albumId = albumId)
     }
 
-    fun setShowHidden(show: Boolean) {
-        nav.value = nav.value.copy(showHidden = show)
+    fun selectTab(tab: MemoriesTab) {
+        nav.value = when (tab) {
+            MemoriesTab.ALBUMS -> MemoriesNav()
+            MemoriesTab.ALL -> MemoriesNav(route = MemoriesRoute.ALBUM)
+            MemoriesTab.HIDDEN -> MemoriesNav(route = MemoriesRoute.ALBUM, showHidden = true)
+        }
     }
 
     fun openMemory(memoryId: String) {
@@ -136,10 +154,6 @@ class MemoriesViewModel(
         return when {
             current.route == MemoriesRoute.DETAIL -> {
                 nav.value = current.copy(route = MemoriesRoute.ALBUM, memoryId = null)
-                true
-            }
-            current.route == MemoriesRoute.ALBUM && current.showHidden -> {
-                nav.value = current.copy(showHidden = false)
                 true
             }
             current.route == MemoriesRoute.ALBUM -> {
