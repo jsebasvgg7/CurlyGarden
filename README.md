@@ -14,8 +14,8 @@ App Android privada para dos personas (pareja, amigos cercanos o familia): un es
 | Imagine (Ideas, Listas, Metas, Cápsulas) | v1 cerrada |
 | Play (Reto del día, ¿Qué prefieres?, ¿Cuánto me conoces?, 11:11) | v1 cerrada |
 | Recuerdos (Álbumes, collage, fotos, mosaico, Draw) | v1 completa en código |
+| Notificaciones (bandeja y push FCM) | Fases 0 a 4 hechas; fase 5 en curso |
 | Pestaña "Nosotros" | Concepto definido, sin implementar |
-| Notificaciones push (FCM) | Sin implementar |
 
 ## Stack
 
@@ -70,7 +70,7 @@ Todo vive en la raíz del repo:
 | `firestore.rules` | Reglas de seguridad de Firestore |
 | `firestore.indexes.json` | Índices (hoy vacío, no hacen falta) |
 | `storage.rules` | Reglas de seguridad de Firebase Storage |
-| `functions/index.js` | Cloud Functions: `createInviteCode`, `redeemInviteCode`, `cancelPendingInvite`, `unlinkCouple` |
+| `functions/` | Cloud Functions (Node 22): callable (`index.js`) y 10 eventos FCM (`notifications.js`) |
 | `firebase.json` | Configuración del CLI |
 
 Despliegue:
@@ -90,20 +90,24 @@ app/src/main/java/com/curlygarden/app/
 ├── couple/            onboarding: crear y canjear código de invitación
 ├── profile/           perfil propio, estado de conexión y nivel
 ├── startup/           decide la pantalla inicial según Firestore
-├── data/streak/       cálculo de la racha a partir de streakLog
+├── data/
+│   ├── network/       NetworkMonitor: detección de conectividad
+│   └── streak/        cálculo de la racha a partir de streakLog
 └── ui/
     ├── animation/     CurlyMotion: animaciones y transiciones
+    ├── components/    CurlyToast y componentes comunes
     ├── theme/         colores, tipografía y tema Compose
     └── screens/
-        ├── auth/      Splash y Login
-        ├── couple/    CoupleOnboardingScreen
-        ├── draw/      Draw: tema, canvas, revelado, historial y rasterizado
-        ├── home/      Home y su repositorio
-        ├── imagine/   Imagine: ideas, listas, metas y cápsulas
-        ├── memories/  Recuerdos: álbumes, mosaico, detalle y diálogos
-        ├── play/      Play: reto del día, ¿Qué prefieres?, ¿Cuánto me conoces? y 11:11
-        ├── profile/   CreateProfileScreen
-        └── talk/      Talk: carta actual, redactar e historial
+        ├── auth/          Splash y Login
+        ├── couple/        CoupleOnboardingScreen
+        ├── draw/          Draw: tema, canvas, revelado, historial y rasterizado
+        ├── home/          Home y su repositorio
+        ├── imagine/       Imagine: ideas, listas, metas y cápsulas
+        ├── memories/      Recuerdos: álbumes, mosaico, detalle y diálogos
+        ├── notifications/ Notificaciones: bandeja, Tu turno, Novedades y ajustes
+        ├── play/          Play: reto del día, ¿Qué prefieres?, ¿Cuánto me conoces? y 11:11
+        ├── profile/       CreateProfileScreen
+        └── talk/          Talk: carta actual, redactar e historial
 ```
 
 ## Documentación
