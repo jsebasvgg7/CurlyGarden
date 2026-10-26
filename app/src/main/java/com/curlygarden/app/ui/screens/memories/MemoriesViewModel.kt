@@ -1,6 +1,5 @@
 package com.curlygarden.app.ui.screens.memories
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -221,7 +220,6 @@ class MemoriesViewModel(
             runCatching { block(session) }
                 .onSuccess { onSuccess(it) }
                 .onFailure {
-                    Log.e("MemoriesVM", failure, it)
                     _errorMessage.value = messageFor(it, failure)
                 }
             isWorking.value = false

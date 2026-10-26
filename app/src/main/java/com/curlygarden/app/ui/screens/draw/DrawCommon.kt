@@ -5,7 +5,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -70,9 +73,13 @@ fun buildSmoothPath(points: List<Offset>): Path {
 
 fun DrawScope.drawNormalizedStrokes(strokes: List<DrawStroke>) {
     val minSide = minOf(size.width, size.height)
+    strokes.firstOrNull { it.fill }?.let { drawRect(it.color.toComposeColor()) }
+    val canvas = drawContext.canvas
+    canvas.saveLayer(Rect(Offset.Zero, size), Paint())
     strokes.forEach { stroke ->
         val flat = stroke.points
-        if (flat.size < 2) return@forEach
+        if (stroke.fill || flat.size < 2) return@forEach
+        val blend = if (stroke.eraser) BlendMode.Clear else BlendMode.SrcOver
 
         val lineWidth = (stroke.width * minSide).coerceAtLeast(1f)
         val color = stroke.color.toComposeColor()
@@ -85,7 +92,7 @@ fun DrawScope.drawNormalizedStrokes(strokes: List<DrawStroke>) {
         }
 
         if (offsets.size == 1) {
-            drawCircle(color = color, radius = lineWidth / 2f, center = offsets[0])
+            drawCircle(color = color, radius = lineWidth / 2f, center = offsets[0], blendMode = blend)
             return@forEach
         }
 
@@ -96,9 +103,11 @@ fun DrawScope.drawNormalizedStrokes(strokes: List<DrawStroke>) {
                 width = lineWidth,
                 cap = StrokeCap.Round,
                 join = StrokeJoin.Round
-            )
+            ),
+            blendMode = blend
         )
     }
+    canvas.restore()
 }
 
 @Composable

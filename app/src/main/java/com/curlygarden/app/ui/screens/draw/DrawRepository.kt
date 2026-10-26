@@ -107,18 +107,22 @@ class DrawRepository(
                     ?.mapNotNull { (it as? Number)?.toFloat() }
                     ?: emptyList(),
                 color = (entry["color"] as? Number)?.toLong() ?: 0xFF7F77DDL,
-                width = (entry["width"] as? Number)?.toFloat() ?: 0.02f
+                width = (entry["width"] as? Number)?.toFloat() ?: 0.02f,
+                eraser = (entry["eraser"] as? Boolean) ?: false,
+                fill = (entry["fill"] as? Boolean) ?: false
             )
         }
     }
 
     private fun strokesToMap(strokes: List<DrawStroke>): List<Map<String, Any>> =
         strokes.map {
-            mapOf(
-                "points" to it.points,
-                "color" to it.color,
-                "width" to it.width
-            )
+            buildMap<String, Any> {
+                put("points", it.points)
+                put("color", it.color)
+                put("width", it.width)
+                if (it.eraser) put("eraser", true)
+                if (it.fill) put("fill", true)
+            }
         }
 
     suspend fun sendTopic(coupleId: String, slots: DrawSlots, topicForPartner: String) {

@@ -10,7 +10,9 @@ enum class DrawRoundStatus {
 data class DrawStroke(
     val points: List<Float> = emptyList(),
     val color: Long = 0xFF7F77DDL,
-    val width: Float = 0.02f
+    val width: Float = 0.02f,
+    val eraser: Boolean = false,
+    val fill: Boolean = false
 )
 
 data class DrawSlots(

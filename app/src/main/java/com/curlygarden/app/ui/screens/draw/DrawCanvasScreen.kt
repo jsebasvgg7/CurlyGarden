@@ -2,10 +2,10 @@ package com.curlygarden.app.ui.screens.draw
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.drag
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,9 +32,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -42,19 +43,24 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
 import com.curlygarden.app.ui.theme.CurlyColors
 import com.curlygarden.app.ui.theme.curlyDarkBackground
 import compose.icons.FeatherIcons
@@ -62,8 +68,10 @@ import compose.icons.feathericons.ArrowLeft
 import compose.icons.feathericons.Check
 import compose.icons.feathericons.CornerUpLeft
 import compose.icons.feathericons.CornerUpRight
-import compose.icons.feathericons.Edit2
+import compose.icons.feathericons.Moon
 import compose.icons.feathericons.Send
+import compose.icons.feathericons.Sliders
+import compose.icons.feathericons.Sun
 import compose.icons.feathericons.Trash2
 
 private const val MIN_POINT_DISTANCE = 2.5f
@@ -94,7 +102,8 @@ private class CanvasStroke(
     }
 }
 
-private val canvasBackground = CurlyColors.DarkSurface
+private val canvasLight = Color.White
+private val canvasDark = CurlyColors.DarkSurface
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -120,8 +129,31 @@ fun DrawCanvasScreen(
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
     var currentColor by remember { mutableStateOf(drawPalette.first()) }
-    var strokeWidth by remember { mutableFloatStateOf(10f) }
-    var isEraser by remember { mutableStateOf(false) }
+    var customColor by remember { mutableStateOf<Color?>(null) }
+    var showColorPicker by remember { mutableStateOf(false) }
+    var tool by remember { mutableStateOf(DrawTool.Pencil) }
+    val toolWidths = remember {
+        mutableStateMapOf<DrawTool, Float>().apply {
+            DrawTool.values().forEach { put(it, it.defaultWidth) }
+        }
+    }
+    var lightCanvas by remember { mutableStateOf(true) }
+    var showSize by remember { mutableStateOf(false) }
+    var confirmClear by remember { mutableStateOf(false) }
+    val strokeWidth = toolWidths.getValue(tool)
+    val isEraser = tool == DrawTool.Eraser
+    val canvasBackground = if (lightCanvas) canvasLight else canvasDark
+    val selectColor: (Color) -> Unit = {
+        currentColor = it
+        if (tool == DrawTool.Eraser) tool = DrawTool.Pencil
+    }
+
+    LaunchedEffect(confirmClear) {
+        if (confirmClear) {
+            delay(3000)
+            confirmClear = false
+        }
+    }
 
     val canSubmit = hasStrokes &&
             !uiState.myReadyToReveal &&
@@ -189,11 +221,87 @@ fun DrawCanvasScreen(
                 }
             }
 
+            Spacer(Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(23.dp),
+                    color = CurlyColors.DarkSurface,
+                    border = BorderStroke(1.dp, CurlyColors.DarkBorder),
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 46.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Text(
+                            "Tema:",
+                            color = CurlyColors.DarkTextSecondary,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(top = 1.dp)
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            uiState.topicForMe ?: "Cargando…",
+                            color = CurlyColors.DarkTextPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 3
+                        )
+                    }
+                }
+
+                Surface(
+                    onClick = {
+                        viewModel.submitDrawing(strokes.toNormalizedStrokes(canvasSize, canvasBackground))
+                    },
+                    enabled = canSubmit,
+                    shape = CircleShape,
+                    color = if (canSubmit || uiState.myReadyToReveal) {
+                        CurlyColors.DarkLavenderPrimary
+                    } else {
+                        CurlyColors.DarkBorder
+                    },
+                    border = BorderStroke(1.dp, CurlyColors.DarkBorder),
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        when {
+                            isSaving -> CircularProgressIndicator(
+                                color = Color.White,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(20.dp)
+                            )
+
+                            uiState.myReadyToReveal -> Icon(
+                                FeatherIcons.Check,
+                                contentDescription = "enviado",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+
+                            else -> Icon(
+                                FeatherIcons.Send,
+                                contentDescription = "mostrar al otro",
+                                tint = Color.White.copy(alpha = if (canSubmit) 1f else 0.5f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .padding(vertical = 20.dp),
+                    .padding(vertical = 14.dp),
                 contentAlignment = Alignment.Center
             ) {
                 val cardWidth = minOf(maxWidth, maxHeight * 0.75f)
@@ -212,12 +320,16 @@ fun DrawCanvasScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .clip(RoundedCornerShape(24.dp))
+                                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                                 .onSizeChanged { canvasSize = it }
-                                .pointerInput(currentColor, strokeWidth, isEraser) {
+                                .pointerInput(currentColor, strokeWidth, tool) {
                                     awaitEachGesture {
                                         val down = awaitFirstDown(requireUnconsumed = false)
                                         val stroke = CanvasStroke(
-                                            color = if (isEraser) canvasBackground else currentColor,
+                                            color = when (tool) {
+                                                DrawTool.Eraser -> Color.Black
+                                                else -> currentColor.copy(alpha = tool.alpha)
+                                            },
                                             width = strokeWidth,
                                             isEraser = isEraser
                                         )
@@ -244,7 +356,8 @@ fun DrawCanvasScreen(
                                     drawCircle(
                                         color = stroke.color,
                                         radius = stroke.width / 2f,
-                                        center = points.first()
+                                        center = points.first(),
+                                        blendMode = if (stroke.isEraser) BlendMode.Clear else BlendMode.SrcOver
                                     )
                                     return@forEach
                                 }
@@ -256,88 +369,31 @@ fun DrawCanvasScreen(
                                         width = stroke.width,
                                         cap = StrokeCap.Round,
                                         join = StrokeJoin.Round
-                                    )
+                                    ),
+                                    blendMode = if (stroke.isEraser) BlendMode.Clear else BlendMode.SrcOver
                                 )
                             }
                         }
 
-                        Row(
+                        Surface(
+                            onClick = { lightCanvas = !lightCanvas },
+                            shape = CircleShape,
+                            color = Color.Transparent,
                             modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .fillMaxWidth()
-                                .padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .align(Alignment.TopEnd)
+                                .padding(8.dp)
+                                .size(36.dp)
+                                .semantics {
+                                    contentDescription = if (lightCanvas) "Lienzo oscuro" else "Lienzo claro"
+                                }
                         ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = canvasBackground,
-                                border = BorderStroke(1.dp, CurlyColors.DarkBorder),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(46.dp)
-                                    .pointerInput(Unit) { detectTapGestures { } }
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(horizontal = 18.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        "Tema:",
-                                        color = CurlyColors.DarkTextSecondary,
-                                        fontSize = 13.sp
-                                    )
-                                    Spacer(Modifier.width(10.dp))
-                                    Text(
-                                        uiState.topicForMe ?: "Cargando…",
-                                        color = CurlyColors.DarkTextPrimary,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
-
-                            Surface(
-                                onClick = {
-                                    viewModel.submitDrawing(strokes.toNormalizedStrokes(canvasSize))
-                                },
-                                enabled = canSubmit,
-                                shape = CircleShape,
-                                color = if (canSubmit || uiState.myReadyToReveal) {
-                                    CurlyColors.DarkLavenderPrimary
-                                } else {
-                                    CurlyColors.DarkBorder
-                                },
-                                border = BorderStroke(1.dp, CurlyColors.DarkBorder),
-                                modifier = Modifier.size(44.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    when {
-                                        isSaving -> CircularProgressIndicator(
-                                            color = Color.White,
-                                            strokeWidth = 2.dp,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-
-                                        uiState.myReadyToReveal -> Icon(
-                                            FeatherIcons.Check,
-                                            contentDescription = "enviado",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-
-                                        else -> Icon(
-                                            FeatherIcons.Send,
-                                            contentDescription = "mostrar al otro",
-                                            tint = Color.White.copy(alpha = if (canSubmit) 1f else 0.5f),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                }
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    if (lightCanvas) FeatherIcons.Moon else FeatherIcons.Sun,
+                                    contentDescription = null,
+                                    tint = if (lightCanvas) Color(0xFF9C98B8) else Color.White.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         }
                     }
@@ -350,43 +406,25 @@ fun DrawCanvasScreen(
                 border = BorderStroke(1.dp, CurlyColors.DarkBorder),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        ToolChip(
-                            label = "Pincel",
-                            selected = !isEraser,
-                            onClick = { isEraser = false },
-                            modifier = Modifier.weight(1f)
-                        ) { tint ->
-                            Icon(
-                                FeatherIcons.Edit2,
-                                contentDescription = null,
-                                tint = tint,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        ToolChip(
-                            label = "Borrador",
-                            selected = isEraser,
-                            onClick = { isEraser = true },
-                            modifier = Modifier.weight(1f)
-                        ) { tint ->
-                            Icon(
-                                FeatherIcons.Trash2,
-                                contentDescription = null,
-                                tint = tint,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.height(20.dp))
-
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(36.dp)
+                            .height(4.dp)
+                            .clip(CircleShape)
+                            .background(CurlyColors.DarkBorder)
+                    )
+                    Spacer(Modifier.height(10.dp))
                     Text(
-                        "Color",
+                        "Selector de colores",
                         color = CurlyColors.DarkTextSecondary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
                     )
                     Spacer(Modifier.height(12.dp))
                     Row(
@@ -397,55 +435,128 @@ fun DrawCanvasScreen(
                         drawPalette.forEach { color ->
                             val selected = color == currentColor && !isEraser
                             Surface(
-                                onClick = {
-                                    currentColor = color
-                                    isEraser = false
-                                },
+                                onClick = { selectColor(color) },
                                 shape = CircleShape,
                                 color = color,
                                 border = if (selected) BorderStroke(2.dp, Color.White) else null,
                                 modifier = Modifier.size(32.dp)
                             ) {}
                         }
+                        DrawRainbowSwatch(
+                            color = customColor,
+                            selected = customColor != null && customColor == currentColor && !isEraser,
+                            onClick = { showColorPicker = true }
+                        )
+                    }
+
+                    if (showColorPicker) {
+                        DrawColorPickerDialog(
+                            initial = customColor ?: currentColor,
+                            onDismiss = { showColorPicker = false },
+                            onConfirm = {
+                                customColor = it
+                                selectColor(it)
+                                showColorPicker = false
+                            }
+                        )
                     }
 
                     Spacer(Modifier.height(16.dp))
 
-                    Text(
-                        "Tamaño",
-                        color = CurlyColors.DarkTextSecondary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Slider(
-                        value = strokeWidth,
-                        onValueChange = { strokeWidth = it },
-                        valueRange = 4f..44f,
-                        colors = SliderDefaults.colors(
-                            thumbColor = CurlyColors.DarkLavenderPrimary,
-                            activeTrackColor = CurlyColors.DarkLavenderPrimary,
-                            inactiveTrackColor = CurlyColors.DarkBorder
-                        )
-                    )
+                    val sizeButton: @Composable () -> Unit = {
+                        DrawToolButton(
+                            label = "Tamaño",
+                            selected = showSize,
+                            onClick = { showSize = !showSize }
+                        ) { tint ->
+                            Icon(
+                                FeatherIcons.Sliders,
+                                contentDescription = null,
+                                tint = tint,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    if (showSize) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Slider(
+                                value = strokeWidth,
+                                onValueChange = { toolWidths[tool] = it },
+                                valueRange = tool.range,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = CurlyColors.DarkLavenderPrimary,
+                                    activeTrackColor = CurlyColors.DarkLavenderPrimary,
+                                    inactiveTrackColor = CurlyColors.DarkBorder
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            sizeButton()
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            DrawTool.values().forEach { item ->
+                                DrawToolButton(
+                                    label = item.label,
+                                    selected = tool == item,
+                                    onClick = { tool = item }
+                                ) { tint -> DrawToolIcon(item, tint) }
+                            }
+                            DrawToolButton(
+                                label = if (confirmClear) "Confirmar borrar todo" else "Borrar todo",
+                                selected = false,
+                                enabled = hasStrokes,
+                                containerColor = if (confirmClear) Color(0xFFE57373) else null,
+                                onClick = {
+                                    if (confirmClear) {
+                                        strokes.clear()
+                                        undone.clear()
+                                        tick++
+                                        confirmClear = false
+                                    } else {
+                                        confirmClear = true
+                                    }
+                                }
+                            ) { tint ->
+                                Icon(
+                                    if (confirmClear) FeatherIcons.Check else FeatherIcons.Trash2,
+                                    contentDescription = null,
+                                    tint = tint,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            sizeButton()
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-private fun List<CanvasStroke>.toNormalizedStrokes(size: IntSize): List<DrawStroke> {
+private fun List<CanvasStroke>.toNormalizedStrokes(size: IntSize, background: Color): List<DrawStroke> {
     if (size.width <= 0 || size.height <= 0) return emptyList()
     val width = size.width.toFloat()
     val height = size.height.toFloat()
     val minSide = minOf(width, height)
 
-    return map { stroke ->
+    val fill = DrawStroke(color = background.toArgbLong(), width = 0f, fill = true)
+    return listOf(fill) + map { stroke ->
         DrawStroke(
             points = stroke.points.flatMap { point ->
                 listOf(point.x / width, point.y / height)
             },
             color = stroke.color.toArgbLong(),
-            width = stroke.width / minSide
+            width = stroke.width / minSide,
+            eraser = stroke.isEraser
         )
     }
 }
@@ -465,33 +576,6 @@ private fun RoundIconButton(
     ) {
         Box(contentAlignment = Alignment.Center) {
             content()
-        }
-    }
-}
-
-@Composable
-private fun ToolChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    icon: @Composable (Color) -> Unit
-) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
-        color = if (selected) CurlyColors.DarkLavenderPrimary else CurlyColors.DarkSurface,
-        border = if (selected) null else BorderStroke(1.dp, CurlyColors.DarkBorder),
-        modifier = modifier.height(48.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            icon(if (selected) Color.White else Color.White.copy(alpha = 0.7f))
-            Spacer(Modifier.width(8.dp))
-            Text(label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
