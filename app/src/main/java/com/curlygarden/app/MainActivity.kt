@@ -23,6 +23,7 @@ import com.curlygarden.app.auth.AuthDestination
 import com.curlygarden.app.auth.AuthViewModel
 import com.curlygarden.app.auth.AuthViewModelFactory
 import com.curlygarden.app.auth.SessionStoreViewModel
+import com.curlygarden.app.data.network.NetworkMonitor
 import com.curlygarden.app.startup.StartupDestination
 import com.curlygarden.app.startup.StartupRepository
 import com.curlygarden.app.ui.screens.auth.LoginScreen
@@ -43,6 +44,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        NetworkMonitor.start(applicationContext)
 
         val highestRefreshRate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             display?.supportedModes?.maxOfOrNull { it.refreshRate }

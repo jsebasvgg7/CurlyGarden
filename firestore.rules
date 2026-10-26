@@ -198,12 +198,30 @@ service cloud.firestore {
         && data.createdAt == request.time;
     }
 
+    function validNotificationSettings(data) {
+      return (!('pushEnabled' in data) || data.pushEnabled is bool)
+        && (!('notificationPrefs' in data) || data.notificationPrefs is map)
+        && (!('pushTokens' in data)
+            || (data.pushTokens is list && data.pushTokens.size() <= 10));
+    }
+
     match /users/{userId} {
       allow read: if isMe(userId) || sharesCoupleWith(resource.data);
-      allow create: if isMe(userId);
+      allow create: if isMe(userId)
+        && validNotificationSettings(request.resource.data);
       allow update: if isMe(userId)
-        && request.resource.data.coupleId == resource.data.coupleId;
+        && request.resource.data.coupleId == resource.data.coupleId
+        && validNotificationSettings(request.resource.data);
       allow delete: if false;
+
+      match /notifications/{notificationId} {
+        allow read: if isMe(userId);
+        allow update: if isMe(userId)
+          && onlyChanges(['read'])
+          && resource.data.read == false
+          && request.resource.data.read == true;
+        allow create, delete: if false;
+      }
     }
 
     match /couples/{coupleId} {

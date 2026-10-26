@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.curlygarden.app.data.network.rejectIfOffline
 
 enum class MemoriesRoute { INDEX, ALBUM, DETAIL }
 
@@ -191,6 +192,7 @@ class MemoriesViewModel(
 
     fun setHidden(memory: Memory, hidden: Boolean, onSuccess: () -> Unit = {}) {
         val session = sessionState.value ?: return
+        if (_errorMessage.rejectIfOffline()) return
         viewModelScope.launch {
             runCatching { repository.setHidden(session.coupleId, memory.id, hidden) }
                 .onSuccess { onSuccess() }
@@ -212,6 +214,7 @@ class MemoriesViewModel(
     ) {
         val session = sessionState.value ?: return
         if (isWorking.value) return
+        if (_errorMessage.rejectIfOffline()) return
         viewModelScope.launch {
             isWorking.value = true
             runCatching { block(session) }

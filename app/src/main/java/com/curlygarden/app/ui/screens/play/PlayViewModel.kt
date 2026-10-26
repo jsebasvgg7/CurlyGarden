@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import com.curlygarden.app.data.network.rejectIfOffline
 
 enum class PlayRoute {
     INDEX,
@@ -393,6 +394,7 @@ class PlayViewModel(
     ) {
         val session = sessionState.value ?: return
         if (local.value.isWorking) return
+        if (_errorMessage.rejectIfOffline()) return
         viewModelScope.launch {
             local.update { it.copy(isWorking = true) }
             runCatching { block(session) }

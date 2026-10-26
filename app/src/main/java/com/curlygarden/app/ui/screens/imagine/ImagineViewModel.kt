@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.curlygarden.app.data.network.rejectIfOffline
 
 data class ImagineNav(
     val category: ImagineCategory? = null,
@@ -328,6 +329,7 @@ class ImagineViewModel(
     ) {
         val session = sessionState.value ?: return
         if (isWorking.value) return
+        if (_errorMessage.rejectIfOffline()) return
         viewModelScope.launch {
             isWorking.value = true
             runCatching { block(session) }
@@ -339,6 +341,7 @@ class ImagineViewModel(
 
     private fun quick(failure: String, block: suspend (ImagineSession) -> Unit) {
         val session = sessionState.value ?: return
+        if (_errorMessage.rejectIfOffline()) return
         viewModelScope.launch {
             runCatching { block(session) }
                 .onFailure { _errorMessage.value = messageFor(it, failure) }

@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.curlygarden.app.data.network.rejectIfOffline
 
 data class TalkUiState(
     val isLoading: Boolean = true,
@@ -140,6 +141,7 @@ class TalkViewModel(
         val session = sessionState.value ?: return
         if (isSending.value) return
         if (text.isBlank()) return
+        if (_errorMessage.rejectIfOffline()) return
         viewModelScope.launch {
             isSending.value = true
             runCatching { repository.send(session.coupleId, text, replyTo) }

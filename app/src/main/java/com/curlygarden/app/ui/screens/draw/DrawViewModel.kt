@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import com.curlygarden.app.data.network.rejectIfOffline
 
 data class DrawUiState(
     val isLoading: Boolean = true,
@@ -132,6 +133,8 @@ class DrawViewModel(
             return
         }
 
+        if (_errorMessage.rejectIfOffline()) return
+
         viewModelScope.launch {
             _savingMemoryIds.value = _savingMemoryIds.value + entry.id
             runCatching {
@@ -154,6 +157,8 @@ class DrawViewModel(
         val trimmed = topicForPartner.trim()
         if (trimmed.isEmpty() || _isSendingTopic.value) return
 
+        if (_errorMessage.rejectIfOffline()) return
+
         viewModelScope.launch {
             _isSendingTopic.value = true
             runCatching { repository.sendTopic(session.first, session.second, trimmed) }
@@ -170,6 +175,8 @@ class DrawViewModel(
         val session = sessionFlow.value ?: return
         if (_isSavingDrawing.value) return
 
+        if (_errorMessage.rejectIfOffline()) return
+
         viewModelScope.launch {
             _isSavingDrawing.value = true
             runCatching {
@@ -183,6 +190,7 @@ class DrawViewModel(
     fun confirmNextRound() {
         val session = sessionFlow.value ?: return
         if (_isStartingNextRound.value) return
+        if (_errorMessage.rejectIfOffline()) return
         viewModelScope.launch {
             _isStartingNextRound.value = true
             runCatching { repository.confirmNextRound(session.first, session.second) }
