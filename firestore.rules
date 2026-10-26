@@ -168,12 +168,14 @@ service cloud.firestore {
 
     function validMemory(data) {
       return data.keys().hasOnly(
-          ['photoUrl', 'caption', 'date', 'aspectRatio', 'albumId', 'createdBy', 'hidden', 'createdAt']
+          ['photoUrl', 'publicId', 'bytes', 'caption', 'date', 'aspectRatio', 'albumId', 'createdBy', 'hidden', 'createdAt']
         )
         && data.keys().hasAll(
           ['photoUrl', 'caption', 'date', 'aspectRatio', 'createdBy', 'hidden', 'createdAt']
         )
         && data.photoUrl is string && data.photoUrl.size() > 0
+        && (!('publicId' in data) || (data.publicId is string && data.publicId.size() > 0))
+        && (!('bytes' in data) || (data.bytes is int && data.bytes > 0 && data.bytes <= 3145728))
         && data.caption is string && data.caption.size() <= 140
         && data.date is timestamp
         && data.aspectRatio is number && data.aspectRatio > 0

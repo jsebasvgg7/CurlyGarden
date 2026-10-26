@@ -268,7 +268,7 @@ private fun MemoriesCollage(photos: List<Memory>, blurred: Boolean = false) {
         val startX = (maxWidth - (photoWidth + step * (count - 1))) / 2
         photos.take(count).forEachIndexed { index, memory ->
             CollagePhoto(
-                url = memory.photoUrl,
+                url = memoryThumbUrl(memory.photoUrl),
                 blurred = blurred,
                 modifier = Modifier
                     .offset(x = startX + step * index, y = PhotoDrops[index])

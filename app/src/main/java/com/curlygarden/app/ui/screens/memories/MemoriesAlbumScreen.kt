@@ -137,7 +137,7 @@ private fun MemoryTile(memory: Memory, onClick: () -> Unit) {
             .border(1.5.dp, Color.White.copy(alpha = 0.85f), shape)
     ) {
         AsyncImage(
-            model = memory.photoUrl,
+            model = memoryThumbUrl(memory.photoUrl),
             contentDescription = memory.caption.ifBlank { null },
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()

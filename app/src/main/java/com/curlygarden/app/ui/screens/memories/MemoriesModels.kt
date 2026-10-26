@@ -4,10 +4,12 @@ import androidx.compose.ui.graphics.Color
 
 const val MEMORIES_ALBUM_NAME_MAX = 40
 const val MEMORIES_CAPTION_MAX = 140
-const val MEMORIES_MAX_PHOTO_BYTES = 10L * 1024 * 1024
+const val MEMORIES_MAX_PHOTO_BYTES = 3L * 1024 * 1024
 const val MEMORIES_COLLAGE_MAX = 4
 
-class PhotoTooLargeException : Exception("La foto supera los 10 MB")
+class PhotoTooLargeException : Exception("La foto supera los 3 MB")
+
+class StorageQuotaExceededException : Exception("Se llenó el espacio de recuerdos")
 
 val MemoriesAlbumColors = listOf(
     Color(0xFFFF9A9A),

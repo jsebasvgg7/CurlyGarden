@@ -7,8 +7,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
-import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.StorageMetadata
+import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -18,7 +17,7 @@ import java.util.Date
 class MemoriesRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
-    private val storage: FirebaseStorage = FirebaseStorage.getInstance()
+    private val functions: FirebaseFunctions = FirebaseFunctions.getInstance()
 ) {
 
     private fun memoriesOf(coupleId: String): CollectionReference =
@@ -102,10 +101,12 @@ class MemoriesRepository(
         if (photo.bytes.size.toLong() > MEMORIES_MAX_PHOTO_BYTES) throw PhotoTooLargeException()
 
         val ref = memoriesOf(coupleId).document()
-        val photoUrl = upload(coupleId, ref.id, photo)
+        val uploaded = uploadPhotoToCloudinary(functions, photo)
 
         val data = hashMapOf<String, Any>(
-            "photoUrl" to photoUrl,
+            "photoUrl" to uploaded.url,
+            "publicId" to uploaded.publicId,
+            "bytes" to uploaded.bytes,
             "caption" to caption.trim().take(MEMORIES_CAPTION_MAX),
             "date" to Timestamp(Date(dateMillis)),
             "aspectRatio" to photo.aspectRatio.coerceAtLeast(0.01f).toDouble(),
@@ -120,22 +121,6 @@ class MemoriesRepository(
 
     suspend fun setHidden(coupleId: String, memoryId: String, hidden: Boolean) {
         memoriesOf(coupleId).document(memoryId).update("hidden", hidden).await()
-    }
-
-    private suspend fun upload(coupleId: String, memoryId: String, photo: MemoryPhoto): String {
-        val path = "memory_photos/$coupleId/$memoryId/${System.currentTimeMillis()}.${photo.extension()}"
-        val ref = storage.reference.child(path)
-        val metadata = StorageMetadata.Builder()
-            .setContentType(photo.mimeType)
-            .build()
-        ref.putBytes(photo.bytes, metadata).await()
-        return ref.downloadUrl.await().toString()
-    }
-
-    private fun MemoryPhoto.extension(): String = when (mimeType) {
-        "image/png" -> "png"
-        "image/webp" -> "webp"
-        else -> "jpg"
     }
 
     private fun requireUid(): String =

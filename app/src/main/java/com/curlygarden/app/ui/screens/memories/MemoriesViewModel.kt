@@ -1,5 +1,6 @@
 package com.curlygarden.app.ui.screens.memories
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -219,11 +220,17 @@ class MemoriesViewModel(
             isWorking.value = true
             runCatching { block(session) }
                 .onSuccess { onSuccess(it) }
-                .onFailure { _errorMessage.value = messageFor(it, failure) }
+                .onFailure {
+                    Log.e("MemoriesVM", failure, it)
+                    _errorMessage.value = messageFor(it, failure)
+                }
             isWorking.value = false
         }
     }
 
     private fun messageFor(error: Throwable, fallback: String): String =
-        (error as? PhotoTooLargeException)?.message ?: fallback
+        when (error) {
+            is PhotoTooLargeException, is StorageQuotaExceededException -> error.message ?: fallback
+            else -> fallback
+        }
 }

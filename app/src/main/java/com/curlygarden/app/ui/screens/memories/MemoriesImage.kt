@@ -13,8 +13,8 @@ import kotlin.math.min
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-private const val PHOTO_MAX_SIDE = 1600
-private const val PHOTO_QUALITY = 85
+private const val PHOTO_MAX_SIDE = 1280
+private const val PHOTO_QUALITY = 80
 
 internal suspend fun readMemoryPhoto(context: Context, uri: Uri): MemoryPhoto =
     withContext(Dispatchers.IO) {
