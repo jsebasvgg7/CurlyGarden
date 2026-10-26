@@ -7,6 +7,8 @@ import com.curlygarden.app.ui.screens.notifications.NotificationModule
 
 object PushChannels {
 
+    const val REMINDERS_CHANNEL = "reminders"
+
     fun create(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         NotificationModule.entries.forEach { module ->
@@ -18,5 +20,12 @@ object PushChannels {
                 )
             )
         }
+        manager.createNotificationChannel(
+            NotificationChannel(
+                REMINDERS_CHANNEL,
+                "Recordatorios",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+        )
     }
 }

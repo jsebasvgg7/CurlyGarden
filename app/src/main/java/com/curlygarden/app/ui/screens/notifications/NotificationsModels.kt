@@ -29,6 +29,7 @@ enum class NotificationKind(
     PLAY_SESSION_NEW("play_session_new", NotificationModule.PLAY, NotificationTab.TURN, true, "Partida nueva"),
     PLAY_GUESS_TURN("play_guess_turn", NotificationModule.PLAY, NotificationTab.TURN, true, "Te toca adivinar"),
     PLAY_RESULT("play_result", NotificationModule.PLAY, NotificationTab.NEWS, true, "Resultado de partida"),
+    IMAGINE_NEW("imagine_new", NotificationModule.IMAGINE, NotificationTab.NEWS, true, "Algo nuevo en Imaginar"),
     IMAGINE_CAPSULE_PENDING("imagine_capsule_pending", NotificationModule.IMAGINE, NotificationTab.TURN, true, "Falta tu parte en una cápsula"),
     IMAGINE_CAPSULE_READY("imagine_capsule_ready", NotificationModule.IMAGINE, NotificationTab.NEWS, true, "Cápsula lista para abrir"),
     IMAGINE_JOINED("imagine_joined", NotificationModule.IMAGINE, NotificationTab.NEWS, false, "Se unieron a algo tuyo"),

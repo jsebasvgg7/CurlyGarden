@@ -3,7 +3,8 @@ const {
   onDocumentUpdated,
   onDocumentWritten,
 } = require("firebase-functions/v2/firestore");
-const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 
 const db = getFirestore();
@@ -11,6 +12,9 @@ const db = getFirestore();
 const REGION = "us-central1";
 const FALLBACK_NAME = "El otro";
 const SLOTS = ["user1", "user2"];
+const DEFAULT_TIMEZONE = "America/Bogota";
+const CAPSULE_LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000;
+const CAPSULE_NOTIFY_FROM_HOUR = 8;
 
 const MODULE_LABELS = {
   talk: "Hablar",
@@ -89,6 +93,13 @@ const KINDS = {
     push: true,
     text: () => "Ya hay resultado",
   },
+  imagine_new: {
+    title: "Algo nuevo en Imaginar",
+    module: "imagine",
+    inbox: true,
+    push: true,
+    text: (name) => `${name} añadió algo en Imaginar`,
+  },
   imagine_capsule_pending: {
     title: "Cápsula del tiempo",
     module: "imagine",
@@ -102,6 +113,13 @@ const KINDS = {
     inbox: true,
     push: false,
     text: (name) => `${name} se unió a algo tuyo`,
+  },
+  imagine_capsule_ready: {
+    title: "Cápsula lista",
+    module: "imagine",
+    inbox: true,
+    push: true,
+    text: () => "Una cápsula ya se puede abrir",
   },
   memory_new: {
     title: "Nuevo recuerdo",
@@ -149,7 +167,7 @@ function newTrueSlots(before, after, field) {
   return SLOTS.filter((slot) => now[slot] === true && was[slot] !== true);
 }
 
-async function writeInbox({ recipientUid, actorUid, kind, refId, eventId }) {
+async function writeInbox({ recipientUid, actorUid, kind, refId, eventId, once }) {
   const def = KINDS[kind];
   const data = {
     kind,
@@ -159,12 +177,16 @@ async function writeInbox({ recipientUid, actorUid, kind, refId, eventId }) {
     createdAt: FieldValue.serverTimestamp(),
   };
   if (refId) data.refId = refId;
-  await db
+  const ref = db
     .collection("users")
     .doc(recipientUid)
     .collection("notifications")
-    .doc(`${eventId}_${kind}`)
-    .set(data);
+    .doc(`${eventId}_${kind}`);
+  if (once) {
+    await ref.create(data);
+  } else {
+    await ref.set(data);
+  }
 }
 
 async function sendPush({ recipientRef, recipientSnap, kind, name }) {
@@ -201,7 +223,7 @@ async function sendPush({ recipientRef, recipientSnap, kind, name }) {
   }
 }
 
-async function notify({ pair, recipientUid, kind, refId, eventId }) {
+async function notify({ pair, recipientUid, kind, refId, eventId, once }) {
   if (!recipientUid) return;
   const actorUid = otherMember(pair, recipientUid);
   if (!actorUid) return;
@@ -225,8 +247,9 @@ async function notify({ pair, recipientUid, kind, refId, eventId }) {
 
   if (def.inbox) {
     try {
-      await writeInbox({ recipientUid, actorUid, kind, refId, eventId });
+      await writeInbox({ recipientUid, actorUid, kind, refId, eventId, once });
     } catch (error) {
+      if (once && error.code === 6) return;
       console.error("notify: bandeja fallida", kind, error);
     }
   }
@@ -367,18 +390,41 @@ exports.notifyCapsuleCreated = onDocumentCreated(
   { document: "couples/{coupleId}/imagineCapsules/{capsuleId}", region: REGION },
   async (event) => {
     const capsule = event.data && event.data.data();
-    if (!capsule || capsule.mode !== "shared" || !capsule.createdBy) return;
+    if (!capsule || !capsule.createdBy) return;
     const pair = await loadPair(event.params.coupleId);
     if (!pair) return;
     await notify({
       pair,
       recipientUid: otherMember(pair, capsule.createdBy),
-      kind: "imagine_capsule_pending",
+      kind: capsule.mode === "shared" ? "imagine_capsule_pending" : "imagine_new",
       refId: event.params.capsuleId,
       eventId: event.id,
     });
   }
 );
+
+function createdHandler(collection) {
+  return onDocumentCreated(
+    { document: `couples/{coupleId}/${collection}/{entryId}`, region: REGION },
+    async (event) => {
+      const entry = event.data && event.data.data();
+      if (!entry || !entry.createdBy) return;
+      const pair = await loadPair(event.params.coupleId);
+      if (!pair) return;
+      await notify({
+        pair,
+        recipientUid: otherMember(pair, entry.createdBy),
+        kind: "imagine_new",
+        refId: event.params.entryId,
+        eventId: event.id,
+      });
+    }
+  );
+}
+
+exports.notifyIdeaCreated = createdHandler("imagineIdeas");
+exports.notifyListCreated = createdHandler("imagineLists");
+exports.notifyGoalCreated = createdHandler("imagineGoals");
 
 function joinedHandler(collection) {
   return onDocumentUpdated(
@@ -421,5 +467,62 @@ exports.notifyMemoryCreated = onDocumentCreated(
       refId: event.params.memoryId,
       eventId: event.id,
     });
+  }
+);
+
+function localHour(timezone) {
+  try {
+    const hour = parseInt(
+      new Intl.DateTimeFormat("en-US", {
+        hour: "numeric",
+        hourCycle: "h23",
+        timeZone: timezone,
+      }).format(new Date()),
+      10
+    );
+    return Number.isNaN(hour) ? CAPSULE_NOTIFY_FROM_HOUR : hour;
+  } catch (error) {
+    return CAPSULE_NOTIFY_FROM_HOUR;
+  }
+}
+
+exports.notifyCapsulesReady = onSchedule(
+  { schedule: "every 60 minutes", region: REGION },
+  async () => {
+    const now = Timestamp.now();
+    const since = Timestamp.fromMillis(now.toMillis() - CAPSULE_LOOKBACK_MS);
+    const couples = await db.collection("couples").get();
+
+    for (const couple of couples.docs) {
+      const user1Id = couple.get("user1Id") || "";
+      const user2Id = couple.get("user2Id") || "";
+      if (!user1Id || !user2Id) continue;
+      if (localHour(couple.get("timezone") || DEFAULT_TIMEZONE) < CAPSULE_NOTIFY_FROM_HOUR) {
+        continue;
+      }
+      const pair = { user1Id, user2Id };
+
+      try {
+        const capsules = await couple.ref
+          .collection("imagineCapsules")
+          .where("unlockDate", "<=", now)
+          .where("unlockDate", ">", since)
+          .get();
+        for (const capsule of capsules.docs) {
+          for (const recipientUid of [user1Id, user2Id]) {
+            await notify({
+              pair,
+              recipientUid,
+              kind: "imagine_capsule_ready",
+              refId: capsule.id,
+              eventId: `capsule_${capsule.id}`,
+              once: true,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("notifyCapsulesReady", couple.id, error);
+      }
+    }
   }
 );

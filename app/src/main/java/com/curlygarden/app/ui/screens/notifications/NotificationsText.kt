@@ -14,6 +14,7 @@ fun notificationText(kind: NotificationKind, name: String): String = when (kind)
     NotificationKind.PLAY_SESSION_NEW -> "$name empezó una partida"
     NotificationKind.PLAY_GUESS_TURN -> "Ya puedes adivinar"
     NotificationKind.PLAY_RESULT -> "Ya hay resultado"
+    NotificationKind.IMAGINE_NEW -> "$name añadió algo en Imaginar"
     NotificationKind.IMAGINE_CAPSULE_PENDING -> "Falta tu parte en una cápsula"
     NotificationKind.IMAGINE_CAPSULE_READY -> "Una cápsula ya se puede abrir"
     NotificationKind.IMAGINE_JOINED -> "$name se unió a algo tuyo"

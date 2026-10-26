@@ -31,6 +31,7 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SportsEsports
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -39,6 +40,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -78,8 +82,18 @@ fun NotificationsScreen(
     viewModel: NotificationsViewModel = viewModel(factory = NotificationsViewModelFactory())
 ) {
     val state by viewModel.uiState.collectAsState()
-    BackHandler(onBack = onBack)
+    var showSettings by rememberSaveable { mutableStateOf(false) }
+    BackHandler { if (showSettings) showSettings = false else onBack() }
     PushPermissionPrompt()
+
+    if (showSettings) {
+        NotificationsSettingsScreen(
+            state = state,
+            viewModel = viewModel,
+            onBack = { showSettings = false }
+        )
+        return
+    }
 
     val rows = if (state.tab == NotificationTab.TURN) {
         state.turn.map { item ->
@@ -98,7 +112,7 @@ fun NotificationsScreen(
                 .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
-            NotificationsHeader(onBack = onBack)
+            NotificationsHeader(onBack = onBack, onSettings = { showSettings = true })
             Spacer(Modifier.height(16.dp))
             NotificationTabs(
                 selected = state.tab,
@@ -168,7 +182,7 @@ fun NotificationsScreen(
 }
 
 @Composable
-private fun NotificationsHeader(onBack: () -> Unit) {
+private fun NotificationsHeader(onBack: () -> Unit, onSettings: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -184,8 +198,12 @@ private fun NotificationsHeader(onBack: () -> Unit) {
             fontSize = 22.sp,
             lineHeight = 28.sp,
             fontWeight = FontWeight.Bold,
-            color = CurlyColors.DarkTextPrimary
+            color = CurlyColors.DarkTextPrimary,
+            modifier = Modifier.weight(1f)
         )
+        TalkCircleButton(onClick = onSettings) {
+            Icon(Icons.Outlined.Settings, contentDescription = "Ajustes de avisos", tint = CurlyColors.DarkTextPrimary)
+        }
     }
 }
 

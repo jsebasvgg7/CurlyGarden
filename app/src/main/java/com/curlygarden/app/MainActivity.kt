@@ -25,6 +25,7 @@ import com.curlygarden.app.auth.AuthViewModel
 import com.curlygarden.app.auth.AuthViewModelFactory
 import com.curlygarden.app.auth.SessionStoreViewModel
 import com.curlygarden.app.data.network.NetworkMonitor
+import com.curlygarden.app.push.ElevenReminder
 import com.curlygarden.app.push.PushTokenManager
 import com.curlygarden.app.startup.StartupDestination
 import com.curlygarden.app.startup.StartupRepository
@@ -110,6 +111,7 @@ fun CurlyGardenApp(
     var screen by remember { mutableStateOf<AppScreen?>(null) }
     val scope = rememberCoroutineScope()
     val pushTokens = remember { PushTokenManager() }
+    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
     var loggingOut by remember { mutableStateOf(false) }
 
     LaunchedEffect(screen) {
@@ -174,6 +176,7 @@ fun CurlyGardenApp(
                         if (!loggingOut) {
                             loggingOut = true
                             scope.launch {
+                                ElevenReminder.disable(appContext)
                                 pushTokens.unregister()
                                 sessionStore.reset()
                                 authViewModel.signOut()
