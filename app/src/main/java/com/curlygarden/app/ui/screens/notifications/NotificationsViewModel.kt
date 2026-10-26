@@ -15,12 +15,14 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.curlygarden.app.ui.screens.talk.TalkProfile
 
 data class NotificationsUiState(
     val isLoading: Boolean = true,
     val session: NotificationsSession? = null,
     val inbox: List<InboxNotification> = emptyList(),
     val settings: NotificationSettings = NotificationSettings(),
+    val turn: List<TurnItem> = emptyList(),
     val loadFailed: Boolean = false,
     val tab: NotificationTab = NotificationTab.TURN
 ) {
@@ -32,11 +34,22 @@ data class NotificationsUiState(
         else -> session?.partnerProfile?.name
     }?.takeIf { it.isNotBlank() } ?: NOTIFICATIONS_FALLBACK_NAME
 
+    fun profileFor(uid: String): TalkProfile? {
+        val profile = if (uid == session?.myUid) session?.myProfile else session?.partnerProfile
+        return profile?.let { TalkProfile(it.uid, it.name, it.photoUrl) }
+    }
+
     fun photoFor(uid: String): String = when (uid) {
         session?.myUid -> session?.myProfile?.photoUrl
         else -> session?.partnerProfile?.photoUrl
     }.orEmpty()
 }
+
+private data class NotificationsData(
+    val inbox: List<InboxNotification>,
+    val settings: NotificationSettings,
+    val turn: List<TurnItem>
+)
 
 private data class NotificationsLocal(
     val tab: NotificationTab,
@@ -85,18 +98,27 @@ class NotificationsViewModel(
         }
     }
 
+    private val turnFlow: Flow<List<TurnItem>> = sessionState.flatMapLatest { session ->
+        if (session == null) flowOf(emptyList()) else repository.observeTurn(session)
+    }
+
+    private val dataFlow: Flow<NotificationsData> = combine(
+        inboxFlow, settingsFlow, turnFlow
+    ) { inbox, settings, turn -> NotificationsData(inbox, settings, turn) }
+
     private val localFlow: Flow<NotificationsLocal> = combine(tab, loadFailed) { t, failed ->
         NotificationsLocal(t, failed)
     }
 
     val uiState: StateFlow<NotificationsUiState> = combine(
-        sessionLoaded, sessionState, inboxFlow, settingsFlow, localFlow
-    ) { loaded, session, inbox, settings, local ->
+        sessionLoaded, sessionState, dataFlow, localFlow
+    ) { loaded, session, data, local ->
         NotificationsUiState(
             isLoading = !loaded,
             session = session,
-            inbox = inbox,
-            settings = settings,
+            inbox = data.inbox,
+            settings = data.settings,
+            turn = data.turn,
             loadFailed = local.failed,
             tab = local.tab
         )

@@ -50,12 +50,17 @@ import java.time.LocalDate
 import kotlinx.coroutines.delay
 import java.time.format.TextStyle
 import java.util.Locale
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Text
 
 @Composable
 fun HomeScreen(
     onModuleClick: (String) -> Unit = {},
     onProfileClick: () -> Unit = {},
     onInviteClick: () -> Unit = {},
+    onNotificationsClick: () -> Unit = {},
     animateEntrance: Boolean = false,
     viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory())
 ) {
@@ -143,10 +148,14 @@ fun HomeScreen(
                         )
                     }
                 }
-                IconButtonBadge(onClick = { }) {
+                IconButtonBadge(onClick = onNotificationsClick, badge = uiState.notificationBadge) {
                     Icon(
                         Icons.Outlined.Notifications,
-                        contentDescription = "notificaciones",
+                        contentDescription = if (uiState.notificationBadge > 0) {
+                            "notificaciones, ${uiState.notificationBadge} pendientes"
+                        } else {
+                            "notificaciones"
+                        },
                         tint = CurlyColors.DarkTextPrimary
                     )
                 }
@@ -272,14 +281,39 @@ private fun AvatarCircle(
 }
 
 @Composable
-private fun IconButtonBadge(onClick: () -> Unit, content: @Composable () -> Unit) {
-    Surface(
-        onClick = onClick,
-        shape = CircleShape,
-        color = CurlyColors.DarkSurfaceElevated,
-        modifier = Modifier.pressScale(pressedScale = 0.9f).size(44.dp)
-    ) {
-        Box(contentAlignment = Alignment.Center) { content() }
+private fun IconButtonBadge(
+    onClick: () -> Unit,
+    badge: Int = 0,
+    content: @Composable () -> Unit
+) {
+    Box(modifier = Modifier.size(44.dp)) {
+        Surface(
+            onClick = onClick,
+            shape = CircleShape,
+            color = CurlyColors.DarkSurfaceElevated,
+            modifier = Modifier.pressScale(pressedScale = 0.9f).size(44.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) { content() }
+        }
+        if (badge > 0) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 6.dp, y = (-6).dp)
+                    .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp)
+                    .background(Color(0xFFF4B7A6), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    if (badge > 9) "9+" else badge.toString(),
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF26215C)
+                )
+            }
+        }
     }
 }
 

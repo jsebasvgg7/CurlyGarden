@@ -69,6 +69,9 @@ data class NotificationsProfile(
 )
 
 data class NotificationsSession(
+    val coupleId: String?,
+    val mySlot: String?,
+    val timezone: String,
     val myUid: String,
     val partnerUid: String?,
     val myProfile: NotificationsProfile,

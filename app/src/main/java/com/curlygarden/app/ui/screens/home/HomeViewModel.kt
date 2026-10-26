@@ -10,9 +10,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import com.curlygarden.app.ui.screens.notifications.NotificationsRepository
+import kotlinx.coroutines.flow.combine
 
 data class HomeUiState(
     val isLoading: Boolean = true,
+    val notificationBadge: Int = 0,
     val streakDays: Int = 0,
     val weekDaysCompleted: Set<java.time.LocalDate> = emptySet(),
     val myProfile: HomeUserProfile? = null,
@@ -23,16 +26,20 @@ data class HomeUiState(
 )
 
 class HomeViewModel(
-    private val repository: HomeRepository
+    private val repository: HomeRepository,
+    private val notifications: NotificationsRepository = NotificationsRepository()
 ) : ViewModel() {
 
-    val uiState: StateFlow<HomeUiState> = repository.observeHome()
-        .catch {
-            emit(HomeFirestoreData(emptyMap(), DEFAULT_TIMEZONE, null, null, null, loadFailed = true))
-        }
-        .map { data ->
+    private val homeFlow = repository.observeHome().catch {
+        emit(HomeFirestoreData(emptyMap(), DEFAULT_TIMEZONE, null, null, null, loadFailed = true))
+    }
+
+    private val badgeFlow = notifications.observeBadge().catch { emit(0) }
+
+    val uiState: StateFlow<HomeUiState> = combine(homeFlow, badgeFlow) { data, badge ->
             HomeUiState(
                 isLoading = false,
+                notificationBadge = badge,
                 streakDays = calculateStreak(data.streakLog, data.timezone),
                 weekDaysCompleted = weekDaysCompleted(data.streakLog, data.timezone),
                 myProfile = data.myProfile,

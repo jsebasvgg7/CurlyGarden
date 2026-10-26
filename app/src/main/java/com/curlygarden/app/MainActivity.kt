@@ -39,6 +39,8 @@ import com.curlygarden.app.ui.screens.profile.ProfileScreen
 import com.curlygarden.app.ui.screens.talk.TalkScreen
 import com.curlygarden.app.ui.theme.CurlyGardenTheme
 import com.curlygarden.app.ui.theme.CurlyStatusBarStyle
+import com.curlygarden.app.ui.screens.notifications.NotificationModule
+import com.curlygarden.app.ui.screens.notifications.NotificationsScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -150,7 +152,7 @@ fun CurlyGardenApp() {
 }
 
 private enum class HomeDestination {
-    Home, Me, Talk, Draw, Imagine, Play, Recuerdos, MeOnboarding, InviteOnboarding
+    Home, Me, Talk, Draw, Imagine, Play, Recuerdos, Notifications, MeOnboarding, InviteOnboarding
 }
 
 private fun HomeDestination.depth(): Int = when (this) {
@@ -197,6 +199,18 @@ private fun CurlyGardenHome(onLoggedOut: () -> Unit) {
             HomeDestination.Imagine -> ImagineScreen(onBack = { destination = HomeDestination.Home })
             HomeDestination.Play -> PlayScreen(onBack = { destination = HomeDestination.Home })
             HomeDestination.Recuerdos -> MemoriesScreen(onBack = { destination = HomeDestination.Home })
+            HomeDestination.Notifications -> NotificationsScreen(
+                onBack = { destination = HomeDestination.Home },
+                onOpenModule = { module ->
+                    destination = when (module) {
+                        NotificationModule.TALK -> HomeDestination.Talk
+                        NotificationModule.DRAW -> HomeDestination.Draw
+                        NotificationModule.PLAY -> HomeDestination.Play
+                        NotificationModule.IMAGINE -> HomeDestination.Imagine
+                        NotificationModule.MEMORIES -> HomeDestination.Recuerdos
+                    }
+                }
+            )
             HomeDestination.Home -> HomeScreen(
                 onModuleClick = { module ->
                     when (module) {
@@ -209,6 +223,7 @@ private fun CurlyGardenHome(onLoggedOut: () -> Unit) {
                 },
                 onProfileClick = { destination = HomeDestination.Me },
                 onInviteClick = { destination = HomeDestination.InviteOnboarding },
+                onNotificationsClick = { destination = HomeDestination.Notifications },
                 animateEntrance = introPending
             )
             HomeDestination.InviteOnboarding -> CoupleOnboardingScreen(

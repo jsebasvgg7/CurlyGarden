@@ -11,6 +11,11 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import com.curlygarden.app.data.streak.DEFAULT_TIMEZONE
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 
 class NotificationsRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -31,12 +36,16 @@ class NotificationsRepository(
         val myDoc = userDoc(uid).get().await()
         val coupleId = myDoc.getString("coupleId")?.takeIf { it.isNotBlank() }
 
-        val partnerUid = coupleId?.let {
-            val coupleDoc = firestore.collection("couples").document(it).get().await()
-            listOf(
-                coupleDoc.getString("user1Id").orEmpty(),
-                coupleDoc.getString("user2Id").orEmpty()
-            ).firstOrNull { id -> id.isNotBlank() && id != uid }
+        val coupleDoc = coupleId?.let {
+            firestore.collection("couples").document(it).get().await()
+        }
+        val user1 = coupleDoc?.getString("user1Id").orEmpty()
+        val user2 = coupleDoc?.getString("user2Id").orEmpty()
+        val partnerUid = listOf(user1, user2).firstOrNull { it.isNotBlank() && it != uid }
+        val mySlot = when {
+            coupleId == null -> null
+            user1 == uid -> "user1"
+            else -> "user2"
         }
 
         val partnerProfile = partnerUid?.let {
@@ -44,6 +53,9 @@ class NotificationsRepository(
         }
 
         return NotificationsSession(
+            coupleId = coupleId,
+            mySlot = mySlot,
+            timezone = coupleDoc?.getString("timezone")?.takeIf { it.isNotBlank() } ?: DEFAULT_TIMEZONE,
             myUid = uid,
             partnerUid = partnerUid,
             myProfile = myDoc.toProfile(uid),
@@ -74,6 +86,23 @@ class NotificationsRepository(
             trySend(snapshot?.toSettings() ?: NotificationSettings())
         }
         awaitClose { listener.remove() }
+    }
+
+    fun observeTurn(session: NotificationsSession): Flow<List<TurnItem>> =
+        NotificationsTurnSource(firestore).observe(session)
+
+    fun observeBadge(): Flow<Int> = flow {
+        val session = resolveSession()
+        if (session == null) {
+            emit(0)
+            return@flow
+        }
+        emitAll(
+            combine(
+                observeTurn(session),
+                observeInbox(session.myUid).catch { emit(emptyList()) }
+            ) { turn, inbox -> turn.size + inbox.count { !it.read } }
+        )
     }
 
     suspend fun markRead(uid: String, notificationId: String) {
