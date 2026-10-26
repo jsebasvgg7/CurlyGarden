@@ -11,6 +11,7 @@ import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -24,6 +25,7 @@ data class ProfileUiState(
     val daysLinked: Int = 0,
     val level: Int = 1,
     val levelProgress: Int = 0,
+    val loadFailed: Boolean = false,
     val isUnlinking: Boolean = false,
     val unlinkError: String? = null,
     val unlinked: Boolean = false
@@ -36,6 +38,7 @@ class ProfileViewModel(
 
     private val firestoreState: StateFlow<ProfileFirestoreData> =
         repository.observeProfile()
+            .catch { emit(ProfileFirestoreData(null, null, loadFailed = true)) }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
@@ -62,6 +65,7 @@ class ProfileViewModel(
             daysLinked = daysLinked,
             level = stats.level,
             levelProgress = stats.progress,
+            loadFailed = firestoreData.loadFailed,
             isUnlinking = unlink.isUnlinking,
             unlinkError = unlink.error,
             unlinked = unlink.unlinked

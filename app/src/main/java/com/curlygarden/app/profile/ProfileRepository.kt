@@ -28,7 +28,8 @@ data class ProfileFirestoreData(
     val timezone: String = DEFAULT_TIMEZONE,
     val linkedAtMillis: Long? = null,
     val createdAtMillis: Long? = null,
-    val points: Int = 0
+    val points: Int = 0,
+    val loadFailed: Boolean = false
 )
 
 class ProfileRepository(
@@ -77,7 +78,11 @@ class ProfileRepository(
 
     private fun observeUserDoc(uid: String): Flow<MyProfileData?> = callbackFlow {
         val listener = firestore.collection("users").document(uid)
-            .addSnapshotListener { snapshot, _ ->
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
                 val profile = snapshot?.let {
                     if (!it.exists()) null
                     else MyProfileData(
@@ -108,18 +113,25 @@ class ProfileRepository(
         var createdAtMillis: Long? = null
         var points = 0
         var partnerListenerRegistered = false
+        var loadFailed = false
 
         fun emitCurrent() {
             trySend(
                 ProfileFirestoreData(
                     my, partner, streakLog, timezone, linkedAtMillis, createdAtMillis,
-                    points = points
+                    points = points,
+                    loadFailed = loadFailed
                 )
             )
         }
 
         val coupleListener = firestore.collection("couples").document(coupleId)
-            .addSnapshotListener { snapshot, _ ->
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    loadFailed = true
+                    emitCurrent()
+                    return@addSnapshotListener
+                }
                 if (snapshot == null || !snapshot.exists()) {
                     emitCurrent()
                     return@addSnapshotListener
@@ -139,7 +151,12 @@ class ProfileRepository(
 
                     if (partnerId != null) {
                         firestore.collection("users").document(partnerId)
-                            .addSnapshotListener { partnerSnapshot, _ ->
+                            .addSnapshotListener { partnerSnapshot, partnerError ->
+                                if (partnerError != null) {
+                                    loadFailed = true
+                                    emitCurrent()
+                                    return@addSnapshotListener
+                                }
                                 partner = partnerSnapshot?.takeIf { it.exists() }?.let {
                                     MyProfileData(
                                         uid = partnerId,
@@ -156,7 +173,12 @@ class ProfileRepository(
 
         val statsListener = firestore.collection("couples").document(coupleId)
             .collection("playStats").document(myUid)
-            .addSnapshotListener { snapshot, _ ->
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    loadFailed = true
+                    emitCurrent()
+                    return@addSnapshotListener
+                }
                 points = snapshot?.getLong("points")?.toInt() ?: 0
                 emitCurrent()
             }

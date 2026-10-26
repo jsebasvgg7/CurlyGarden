@@ -69,8 +69,10 @@ class DrawViewModel(
         } else {
             emit(coupleId to repository.resolveSlots(coupleId))
         }
-    }.catch { emit(null) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    }.catch {
+        _errorMessage.value = "No se pudo cargar la sesión"
+        emit(null)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val uiState: StateFlow<DrawUiState> = sessionFlow
         .flatMapLatest { session ->
@@ -97,6 +99,7 @@ class DrawViewModel(
                         )
                     }
                     .catch {
+                        _errorMessage.value = "No se pudo cargar la ronda"
                         emit(DrawUiState(isLoading = false, coupleId = coupleId))
                     }
             }
@@ -113,7 +116,10 @@ class DrawViewModel(
                 flowOf(emptyList())
             } else {
                 repository.observeHistory(session.first, session.second)
-                    .catch { emit(emptyList()) }
+                    .catch {
+                        _errorMessage.value = "No se pudo cargar el historial"
+                        emit(emptyList())
+                    }
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

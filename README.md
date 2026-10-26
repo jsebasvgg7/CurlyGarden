@@ -1,6 +1,6 @@
 # CurlyGarden
 
-App Android privada para dos personas (pareja, amigos cercanos o familia): un espacio compartido para hablar, dibujar, jugar e imaginar juntos. Interfaz en español, dark mode.
+App Android privada para dos personas (pareja, amigos cercanos o familia): un espacio compartido para hablar, dibujar, jugar e imaginar juntos. Interfaz en español, dark mode. Versión 0.2 (`versionCode 2`).
 
 ## Estado de los módulos
 
@@ -8,12 +8,13 @@ App Android privada para dos personas (pareja, amigos cercanos o familia): un es
 |---|---|
 | Login con Google, perfil y vinculación por código de invitación | Funcional |
 | Home | Funcional, conectado a Firestore |
-| Perfil (estado de conexión, desvincular, racha, días juntos) | Funcional |
+| Perfil (estado de conexión, desvincular, racha, días juntos, nivel) | Funcional |
 | Talk (muro de cartas, una a la vez) | v1 cerrada |
 | Draw (rondas con temas cruzados y revelado simultáneo) | v1 cerrada |
-| Imagine (Ideas, Listas, Metas, Cápsulas) | Concepto cerrado, sin implementar |
-| Play | Sin implementar |
-| Recuerdos | Sin implementar |
+| Imagine (Ideas, Listas, Metas, Cápsulas) | v1 cerrada |
+| Play (Reto del día, ¿Qué prefieres?, ¿Cuánto me conoces?, 11:11) | v1 cerrada |
+| Recuerdos (Álbumes, collage, fotos, mosaico, Draw) | v1 completa en código |
+| Pestaña "Nosotros" | Concepto definido, sin implementar |
 | Notificaciones push (FCM) | Sin implementar |
 
 ## Stack
@@ -68,6 +69,7 @@ Todo vive en la raíz del repo:
 |---|---|
 | `firestore.rules` | Reglas de seguridad de Firestore |
 | `firestore.indexes.json` | Índices (hoy vacío, no hacen falta) |
+| `storage.rules` | Reglas de seguridad de Firebase Storage |
 | `functions/index.js` | Cloud Functions: `createInviteCode`, `redeemInviteCode`, `cancelPendingInvite`, `unlinkCouple` |
 | `firebase.json` | Configuración del CLI |
 
@@ -75,28 +77,31 @@ Despliegue:
 
 ```
 firebase deploy --only firestore:rules
+firebase deploy --only storage
 firebase deploy --only functions
 ```
-
-Nota: `firebase.json` referencia `storage.rules`, pero ese archivo no está en el repo. Las reglas de Storage hoy se gestionan desde la consola de Firebase.
 
 ## Estructura
 
 ```
 app/src/main/java/com/curlygarden/app/
 ├── MainActivity.kt
-├── auth/              login con Google y Credential Manager
+├── auth/              login con Google, Credential Manager y sesión
 ├── couple/            onboarding: crear y canjear código de invitación
-├── profile/           perfil propio y estado de conexión
+├── profile/           perfil propio, estado de conexión y nivel
 ├── startup/           decide la pantalla inicial según Firestore
 ├── data/streak/       cálculo de la racha a partir de streakLog
 └── ui/
+    ├── animation/     CurlyMotion: animaciones y transiciones
     ├── theme/         colores, tipografía y tema Compose
     └── screens/
         ├── auth/      Splash y Login
         ├── couple/    CoupleOnboardingScreen
-        ├── draw/      Draw: tema, canvas, revelado e historial
+        ├── draw/      Draw: tema, canvas, revelado, historial y rasterizado
         ├── home/      Home y su repositorio
+        ├── imagine/   Imagine: ideas, listas, metas y cápsulas
+        ├── memories/  Recuerdos: álbumes, mosaico, detalle y diálogos
+        ├── play/      Play: reto del día, ¿Qué prefieres?, ¿Cuánto me conoces? y 11:11
         ├── profile/   CreateProfileScreen
         └── talk/      Talk: carta actual, redactar e historial
 ```

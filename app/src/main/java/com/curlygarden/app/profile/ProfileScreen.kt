@@ -38,6 +38,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.curlygarden.app.profile.MyProfileData
 import com.curlygarden.app.profile.ProfileUiState
+import com.curlygarden.app.ui.components.CurlyToast
+import kotlinx.coroutines.delay
 import com.curlygarden.app.profile.ProfileViewModel
 import com.curlygarden.app.profile.ProfileViewModelFactory
 import com.curlygarden.app.ui.theme.CurlyColors
@@ -52,6 +54,15 @@ fun ProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showConnectionModal by remember { mutableStateOf(false) }
+    var showLoadError by remember { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.loadFailed) {
+        if (uiState.loadFailed) {
+            showLoadError = true
+            delay(2500)
+            showLoadError = false
+        }
+    }
 
     LaunchedEffect(uiState.unlinked) {
         if (uiState.unlinked) {
@@ -128,6 +139,13 @@ fun ProfileScreen(
                     label = "dias juntos"
                 )
             }
+        }
+
+        if (showLoadError) {
+            CurlyToast(
+                message = "No se pudo actualizar todo. Revisa tu conexión.",
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 

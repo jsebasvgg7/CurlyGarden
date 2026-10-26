@@ -50,7 +50,13 @@ class DrawRepository(
         }
 
     private fun documentFlow(ref: DocumentReference): Flow<DocumentSnapshot?> = callbackFlow {
-        val listener = ref.addSnapshotListener { snapshot, _ -> trySend(snapshot) }
+        val listener = ref.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            trySend(snapshot)
+        }
         awaitClose { listener.remove() }
     }
 
@@ -288,7 +294,11 @@ class DrawRepository(
             val listener = firestore.collection("couples").document(coupleId)
                 .collection("drawHistory")
                 .orderBy("createdAt", Query.Direction.DESCENDING)
-                .addSnapshotListener { snapshot, _ ->
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        close(error)
+                        return@addSnapshotListener
+                    }
                     val entries = snapshot?.documents?.map { doc ->
                         DrawHistoryEntry(
                             id = doc.id,

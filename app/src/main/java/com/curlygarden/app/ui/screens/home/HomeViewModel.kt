@@ -2,10 +2,12 @@ package com.curlygarden.app.ui.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.curlygarden.app.data.streak.DEFAULT_TIMEZONE
 import com.curlygarden.app.data.streak.calculateStreak
 import com.curlygarden.app.data.streak.weekDaysCompleted
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
@@ -16,7 +18,8 @@ data class HomeUiState(
     val myProfile: HomeUserProfile? = null,
     val partnerProfile: HomeUserProfile? = null,
     val latestMemory: HomeLatestMemory? = null,
-    val gameCount: Int = 0
+    val gameCount: Int = 0,
+    val loadFailed: Boolean = false
 )
 
 class HomeViewModel(
@@ -24,6 +27,9 @@ class HomeViewModel(
 ) : ViewModel() {
 
     val uiState: StateFlow<HomeUiState> = repository.observeHome()
+        .catch {
+            emit(HomeFirestoreData(emptyMap(), DEFAULT_TIMEZONE, null, null, null, loadFailed = true))
+        }
         .map { data ->
             HomeUiState(
                 isLoading = false,
@@ -32,7 +38,8 @@ class HomeViewModel(
                 myProfile = data.myProfile,
                 partnerProfile = data.partnerProfile,
                 latestMemory = data.latestMemory,
-                gameCount = data.gameCount
+                gameCount = data.gameCount,
+                loadFailed = data.loadFailed
             )
         }
         .stateIn(

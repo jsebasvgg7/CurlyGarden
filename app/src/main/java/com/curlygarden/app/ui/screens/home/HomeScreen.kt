@@ -20,9 +20,12 @@ import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,10 +42,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.curlygarden.app.R
+import com.curlygarden.app.ui.components.CurlyToast
 import com.curlygarden.app.ui.theme.CurlyColors
 import com.curlygarden.app.ui.theme.curlyDarkBackground
 import androidx.compose.material.icons.filled.Add
 import java.time.LocalDate
+import kotlinx.coroutines.delay
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -55,6 +60,15 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory())
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showLoadError by remember { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.loadFailed) {
+        if (uiState.loadFailed) {
+            showLoadError = true
+            delay(2500)
+            showLoadError = false
+        }
+    }
 
     val scrollState = rememberScrollState()
     Box(modifier = Modifier.curlyDarkBackground()) {
@@ -210,6 +224,13 @@ fun HomeScreen(
                 )
             }
             Spacer(Modifier.height(20.dp))
+        }
+
+        if (showLoadError) {
+            CurlyToast(
+                message = "No se pudo actualizar todo. Revisa tu conexión.",
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 }

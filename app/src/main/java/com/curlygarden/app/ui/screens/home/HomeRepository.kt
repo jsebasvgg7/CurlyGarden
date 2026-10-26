@@ -29,7 +29,8 @@ data class HomeFirestoreData(
     val myProfile: HomeUserProfile?,
     val partnerProfile: HomeUserProfile?,
     val latestMemory: HomeLatestMemory?,
-    val gameCount: Int = 0
+    val gameCount: Int = 0,
+    val loadFailed: Boolean = false
 )
 
 class HomeRepository(
@@ -58,7 +59,11 @@ class HomeRepository(
 
     private fun observeUserProfile(uid: String): Flow<HomeUserProfile?> = callbackFlow {
         val listener = firestore.collection("users").document(uid)
-            .addSnapshotListener { snapshot, _ ->
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
                 val profile = snapshot?.let {
                     if (!it.exists()) null
                     else HomeUserProfile(
@@ -88,18 +93,25 @@ class HomeRepository(
         var dailyCompleted = 0
         var gamesRevealed = 0
         var partnerListenerRegistered = false
+        var loadFailed = false
 
         fun emitCurrent() {
             trySend(
                 HomeFirestoreData(
                     streakLog, timezone, my, partner, latestMemory,
-                    gameCount = dailyCompleted + gamesRevealed
+                    gameCount = dailyCompleted + gamesRevealed,
+                    loadFailed = loadFailed
                 )
             )
         }
 
         val coupleListener = firestore.collection("couples").document(coupleId)
-            .addSnapshotListener { snapshot, _ ->
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    loadFailed = true
+                    emitCurrent()
+                    return@addSnapshotListener
+                }
                 if (snapshot == null || !snapshot.exists()) {
                     emitCurrent()
                     return@addSnapshotListener
@@ -118,7 +130,12 @@ class HomeRepository(
 
                     if (partnerId != null) {
                         firestore.collection("users").document(partnerId)
-                            .addSnapshotListener { partnerSnapshot, _ ->
+                            .addSnapshotListener { partnerSnapshot, partnerError ->
+                                if (partnerError != null) {
+                                    loadFailed = true
+                                    emitCurrent()
+                                    return@addSnapshotListener
+                                }
                                 partner = partnerSnapshot?.takeIf { it.exists() }?.let {
                                     HomeUserProfile(
                                         uid = partnerId,
@@ -137,7 +154,12 @@ class HomeRepository(
             .collection("memories")
             .orderBy("date", Query.Direction.DESCENDING)
             .limit(10)
-            .addSnapshotListener { snapshot, _ ->
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    loadFailed = true
+                    emitCurrent()
+                    return@addSnapshotListener
+                }
                 val doc = snapshot?.documents?.firstOrNull { it.getBoolean("hidden") != true }
                 latestMemory = doc?.let {
                     HomeLatestMemory(
@@ -151,7 +173,12 @@ class HomeRepository(
         val dailyListener = firestore.collection("couples").document(coupleId)
             .collection("dailyChallenges")
             .whereEqualTo("status", "completed")
-            .addSnapshotListener { snapshot, _ ->
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    loadFailed = true
+                    emitCurrent()
+                    return@addSnapshotListener
+                }
                 dailyCompleted = snapshot?.size() ?: 0
                 emitCurrent()
             }
@@ -159,7 +186,12 @@ class HomeRepository(
         val gamesListener = firestore.collection("couples").document(coupleId)
             .collection("gameSessions")
             .whereEqualTo("status", "revealed")
-            .addSnapshotListener { snapshot, _ ->
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    loadFailed = true
+                    emitCurrent()
+                    return@addSnapshotListener
+                }
                 gamesRevealed = snapshot?.size() ?: 0
                 emitCurrent()
             }
