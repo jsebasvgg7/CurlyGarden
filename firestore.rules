@@ -543,7 +543,8 @@ service cloud.firestore {
           && validMemory(request.resource.data);
         allow update: if belongsToCouple(coupleId)
           && isHideToggle();
-        allow delete: if false;
+        allow delete: if belongsToCouple(coupleId)
+          && resource.data.createdBy == request.auth.uid;
       }
 
       match /albums/{albumId} {

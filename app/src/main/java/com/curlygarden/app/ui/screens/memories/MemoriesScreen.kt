@@ -68,6 +68,9 @@ fun MemoriesScreen(onBack: () -> Unit) {
                 onBack = { viewModel.back() },
                 onToggleHidden = { memory ->
                     viewModel.setHidden(memory, !memory.hidden) { viewModel.back() }
+                },
+                onDelete = { memory ->
+                    viewModel.deleteMemory(memory) { viewModel.back() }
                 }
             )
         }

@@ -203,6 +203,17 @@ class MemoriesViewModel(
         }
     }
 
+    fun deleteMemory(memory: Memory, onSuccess: () -> Unit = {}) {
+        val session = sessionState.value ?: return
+        if (memory.createdBy != session.myUid) return
+        if (_errorMessage.rejectIfOffline()) return
+        viewModelScope.launch {
+            runCatching { repository.deleteMemory(session.coupleId, memory.id) }
+                .onSuccess { onSuccess() }
+                .onFailure { _errorMessage.value = "No se pudo eliminar el recuerdo" }
+        }
+    }
+
     fun dismissError() {
         _errorMessage.value = null
     }

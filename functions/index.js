@@ -7,6 +7,7 @@ const db = getFirestore();
 
 Object.assign(exports, require("./notifications"));
 Object.assign(exports, require("./cloudinary"));
+Object.assign(exports, require("./cloudinaryCleanup"));
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const CODE_LENGTH = 6;

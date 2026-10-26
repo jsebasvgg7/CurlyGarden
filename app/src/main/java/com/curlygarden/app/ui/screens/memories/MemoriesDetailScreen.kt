@@ -18,12 +18,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,22 +45,35 @@ import androidx.compose.ui.unit.coerceAtMost
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.curlygarden.app.ui.animation.pressScale
 import com.curlygarden.app.ui.screens.talk.TalkBackground
 import com.curlygarden.app.ui.screens.talk.TalkCircleButton
 import com.curlygarden.app.ui.theme.CurlyColors
 import compose.icons.FeatherIcons
+import compose.icons.feathericons.Check
 import compose.icons.feathericons.Eye
 import compose.icons.feathericons.EyeOff
+import compose.icons.feathericons.Trash2
+import kotlinx.coroutines.delay
 
 private val PhotoMaxHeight = 460.dp
+private val DeleteConfirmColor = Color(0xFFC0392B)
 
 @Composable
 internal fun MemoriesDetailScreen(
     state: MemoriesUiState,
     onBack: () -> Unit,
-    onToggleHidden: (Memory) -> Unit
+    onToggleHidden: (Memory) -> Unit,
+    onDelete: (Memory) -> Unit
 ) {
     val memory = state.currentMemory
+    var confirmDelete by remember(memory?.id) { mutableStateOf(false) }
+    LaunchedEffect(confirmDelete) {
+        if (confirmDelete) {
+            delay(3000)
+            confirmDelete = false
+        }
+    }
 
     TalkBackground {
         Column(
@@ -70,13 +89,26 @@ internal fun MemoriesDetailScreen(
                 onBack = onBack,
                 trailing = {
                     if (memory != null) {
-                        TalkCircleButton(onClick = { onToggleHidden(memory) }) {
-                            Icon(
-                                if (memory.hidden) FeatherIcons.Eye else FeatherIcons.EyeOff,
-                                contentDescription = if (memory.hidden) "Restaurar recuerdo" else "Ocultar recuerdo",
-                                tint = CurlyColors.DarkTextPrimary,
-                                modifier = Modifier.size(20.dp)
-                            )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (memory.createdBy == state.session?.myUid) {
+                                DeleteButton(
+                                    confirming = confirmDelete,
+                                    onClick = {
+                                        if (confirmDelete) onDelete(memory) else confirmDelete = true
+                                    }
+                                )
+                            }
+                            TalkCircleButton(onClick = { onToggleHidden(memory) }) {
+                                Icon(
+                                    if (memory.hidden) FeatherIcons.Eye else FeatherIcons.EyeOff,
+                                    contentDescription = if (memory.hidden) "Restaurar recuerdo" else "Ocultar recuerdo",
+                                    tint = CurlyColors.DarkTextPrimary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -114,6 +146,27 @@ internal fun MemoriesDetailScreen(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun DeleteButton(confirming: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = if (confirming) DeleteConfirmColor else CurlyColors.DarkSurfaceElevated,
+        modifier = Modifier
+            .pressScale(pressedScale = 0.9f)
+            .size(44.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                if (confirming) FeatherIcons.Check else FeatherIcons.Trash2,
+                contentDescription = if (confirming) "Confirmar eliminación" else "Eliminar recuerdo",
+                tint = CurlyColors.DarkTextPrimary,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

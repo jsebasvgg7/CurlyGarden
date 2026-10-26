@@ -123,6 +123,10 @@ class MemoriesRepository(
         memoriesOf(coupleId).document(memoryId).update("hidden", hidden).await()
     }
 
+    suspend fun deleteMemory(coupleId: String, memoryId: String) {
+        memoriesOf(coupleId).document(memoryId).delete().await()
+    }
+
     private fun requireUid(): String =
         auth.currentUser?.uid ?: throw IllegalStateException("Sin sesión")
 
