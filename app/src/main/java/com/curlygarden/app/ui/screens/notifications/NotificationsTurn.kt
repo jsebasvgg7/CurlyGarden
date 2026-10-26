@@ -112,7 +112,7 @@ internal class NotificationsTurnSource(private val firestore: FirebaseFirestore)
         return when {
             status == "answering" &&
                 me !in session.uids("answeredBy") &&
-                session.getString("createdBy") != me ->
+                (session.getString("createdBy") != me || partner in session.uids("answeredBy")) ->
                 listOf(TurnItem(NotificationKind.PLAY_SESSION_NEW, partner, session.id))
             status == "guessing" &&
                 session.getString("type") == "knowMe" &&

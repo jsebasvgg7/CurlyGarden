@@ -1,5 +1,6 @@
 package com.curlygarden.app
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -24,6 +25,7 @@ import com.curlygarden.app.auth.AuthViewModel
 import com.curlygarden.app.auth.AuthViewModelFactory
 import com.curlygarden.app.auth.SessionStoreViewModel
 import com.curlygarden.app.data.network.NetworkMonitor
+import com.curlygarden.app.push.PushTokenManager
 import com.curlygarden.app.startup.StartupDestination
 import com.curlygarden.app.startup.StartupRepository
 import com.curlygarden.app.ui.screens.auth.LoginScreen
@@ -43,10 +45,16 @@ import com.curlygarden.app.ui.screens.notifications.NotificationModule
 import com.curlygarden.app.ui.screens.notifications.NotificationsScreen
 
 class MainActivity : ComponentActivity() {
+    private val pendingModule = mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         NetworkMonitor.start(applicationContext)
+
+        if (savedInstanceState == null) {
+            pendingModule.value = intent?.getStringExtra("module")
+        }
 
         val highestRefreshRate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             display?.supportedModes?.maxOfOrNull { it.refreshRate }
@@ -62,8 +70,17 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            CurlyGardenApp()
+            CurlyGardenApp(
+                pendingModule = pendingModule.value,
+                onPendingModuleHandled = { pendingModule.value = null }
+            )
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingModule.value = intent.getStringExtra("module")
     }
 }
 
@@ -80,7 +97,10 @@ private suspend fun resolveInitialScreen(): AppScreen =
     }
 
 @Composable
-fun CurlyGardenApp() {
+fun CurlyGardenApp(
+    pendingModule: String? = null,
+    onPendingModuleHandled: () -> Unit = {}
+) {
     val authViewModel: AuthViewModel = viewModel(
         factory = AuthViewModelFactory(androidx.compose.ui.platform.LocalContext.current)
     )
@@ -89,6 +109,14 @@ fun CurlyGardenApp() {
 
     var screen by remember { mutableStateOf<AppScreen?>(null) }
     val scope = rememberCoroutineScope()
+    val pushTokens = remember { PushTokenManager() }
+    var loggingOut by remember { mutableStateOf(false) }
+
+    LaunchedEffect(screen) {
+        if (screen == AppScreen.Home) {
+            runCatching { pushTokens.register() }
+        }
+    }
 
     LaunchedEffect(Unit) {
         if (!authViewModel.currentUserExists()) {
@@ -140,10 +168,19 @@ fun CurlyGardenApp() {
             }
             AppScreen.Home -> CurlyGardenTheme(statusBarStyle = CurlyStatusBarStyle.Dark) {
                 CurlyGardenHome(
+                    pendingModule = pendingModule,
+                    onPendingModuleHandled = onPendingModuleHandled,
                     onLoggedOut = {
-                        sessionStore.reset()
-                        authViewModel.signOut()
-                        screen = AppScreen.Login
+                        if (!loggingOut) {
+                            loggingOut = true
+                            scope.launch {
+                                pushTokens.unregister()
+                                sessionStore.reset()
+                                authViewModel.signOut()
+                                loggingOut = false
+                                screen = AppScreen.Login
+                            }
+                        }
                     }
                 )
             }
@@ -162,9 +199,26 @@ private fun HomeDestination.depth(): Int = when (this) {
 }
 
 @Composable
-private fun CurlyGardenHome(onLoggedOut: () -> Unit) {
+private fun CurlyGardenHome(
+    pendingModule: String?,
+    onPendingModuleHandled: () -> Unit,
+    onLoggedOut: () -> Unit
+) {
     var destination by remember { mutableStateOf(HomeDestination.Home) }
     var introPending by remember { mutableStateOf(true) }
+
+    LaunchedEffect(pendingModule) {
+        val target = when (pendingModule) {
+            "talk" -> HomeDestination.Talk
+            "draw" -> HomeDestination.Draw
+            "play" -> HomeDestination.Play
+            "imagine" -> HomeDestination.Imagine
+            "memories" -> HomeDestination.Recuerdos
+            else -> null
+        }
+        if (target != null) destination = target
+        if (pendingModule != null) onPendingModuleHandled()
+    }
 
     LaunchedEffect(destination) {
         if (destination != HomeDestination.Home) introPending = false

@@ -79,10 +79,11 @@ fun NotificationsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     BackHandler(onBack = onBack)
+    PushPermissionPrompt()
 
     val rows = if (state.tab == NotificationTab.TURN) {
-        state.turn.mapIndexed { index, item ->
-            NotificationRow("turn_$index", item.kind, item.actorId, false, null, null)
+        state.turn.map { item ->
+            NotificationRow("turn_${item.kind.key}_${item.refId.orEmpty()}", item.kind, item.actorId, false, null, null)
         }
     } else {
         state.inbox.filter { it.kind.tab == NotificationTab.NEWS }.map {

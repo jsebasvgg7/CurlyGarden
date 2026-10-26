@@ -27,72 +27,84 @@ const STALE_TOKEN_CODES = new Set([
 
 const KINDS = {
   talk_message: {
+    title: "Una carta nueva",
     module: "talk",
     inbox: true,
     push: true,
     text: (name) => `${name} te dejó una carta`,
   },
   draw_topic_received: {
+    title: "Te toca elegir un tema",
     module: "draw",
     inbox: false,
     push: true,
     text: (name) => `${name} ya envió su tema. Te toca enviar el tuyo`,
   },
   draw_ready_to_draw: {
+    title: "¡A dibujar!",
     module: "draw",
     inbox: false,
     push: true,
     text: () => "Ya pueden dibujar",
   },
   draw_revealed: {
+    title: "Dibujos revelados",
     module: "draw",
     inbox: true,
     push: true,
     text: () => "Ya pueden ver los dibujos",
   },
   draw_next_round: {
+    title: "Otra ronda de dibujo",
     module: "draw",
     inbox: false,
     push: false,
     text: (name) => `${name} quiere dibujar de nuevo`,
   },
   play_daily_answered: {
+    title: "Reto del día",
     module: "play",
     inbox: false,
     push: true,
     text: (name) => `${name} ya respondió el reto de hoy`,
   },
   play_session_new: {
+    title: "Nueva partida",
     module: "play",
     inbox: false,
     push: true,
     text: (name) => `${name} empezó una partida`,
   },
   play_guess_turn: {
+    title: "¿Cuánto te conoce?",
     module: "play",
     inbox: false,
     push: true,
     text: () => "Ya puedes adivinar",
   },
   play_result: {
+    title: "Resultado listo",
     module: "play",
     inbox: true,
     push: true,
     text: () => "Ya hay resultado",
   },
   imagine_capsule_pending: {
+    title: "Cápsula del tiempo",
     module: "imagine",
     inbox: false,
     push: true,
     text: () => "Falta tu parte en una cápsula",
   },
   imagine_joined: {
+    title: "Ahora es de los dos",
     module: "imagine",
     inbox: true,
     push: false,
     text: (name) => `${name} se unió a algo tuyo`,
   },
   memory_new: {
+    title: "Nuevo recuerdo",
     module: "memories",
     inbox: true,
     push: true,
@@ -168,7 +180,7 @@ async function sendPush({ recipientRef, recipientSnap, kind, name }) {
   const response = await getMessaging().sendEachForMulticast({
     tokens,
     notification: {
-      title: MODULE_LABELS[def.module],
+      title: def.title || MODULE_LABELS[def.module],
       body: def.text(name),
     },
     data: { kind, module: def.module },
