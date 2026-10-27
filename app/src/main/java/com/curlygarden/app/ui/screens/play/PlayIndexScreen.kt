@@ -31,8 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -40,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.curlygarden.app.ui.components.CurlyDepthCard
 import com.curlygarden.app.ui.animation.entrance
 import com.curlygarden.app.ui.animation.pressScale
 import com.curlygarden.app.ui.screens.talk.TalkBackground
@@ -58,7 +57,6 @@ import java.time.temporal.ChronoUnit
 
 internal val PlayRose = Color(0xFFF4B7A6)
 internal val PlaySky = Color(0xFF9BBFE0)
-private val PLAY_EDGE = 5.dp
 private const val PLAY_RECENT_LIMIT = 3
 
 @Composable
@@ -296,50 +294,6 @@ private fun PlaySectionTitle(icon: ImageVector, text: String) {
 }
 
 @Composable
-internal fun PlayDepthCard(
-    color: Color,
-    shape: Shape,
-    modifier: Modifier = Modifier,
-    fillHeight: Boolean = false,
-    onClick: (() -> Unit)? = null,
-    content: @Composable () -> Unit
-) {
-    val edge = lerp(color, Color.Black, 0.3f)
-    val surfaceModifier = Modifier
-        .fillMaxWidth()
-        .then(if (fillHeight) Modifier.fillMaxHeight() else Modifier)
-        .padding(bottom = PLAY_EDGE)
-    val rim = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
-
-    Box(modifier = modifier) {
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .padding(top = PLAY_EDGE)
-                .background(edge, shape)
-        )
-        if (onClick != null) {
-            Surface(
-                onClick = onClick,
-                shape = shape,
-                color = color,
-                border = rim,
-                modifier = surfaceModifier,
-                content = content
-            )
-        } else {
-            Surface(
-                shape = shape,
-                color = color,
-                border = rim,
-                modifier = surfaceModifier,
-                content = content
-            )
-        }
-    }
-}
-
-@Composable
 private fun PlayDailyHero(
     cardState: DailyCardState,
     onClick: () -> Unit,
@@ -352,7 +306,7 @@ private fun PlayDailyHero(
     }
     val waiting = cardState == DailyCardState.WAITING
 
-    PlayDepthCard(
+    CurlyDepthCard(
         color = PlayAccent,
         shape = RoundedCornerShape(26.dp),
         onClick = onClick,
@@ -450,7 +404,7 @@ private fun PlayGameCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
-    PlayDepthCard(
+    CurlyDepthCard(
         color = color,
         shape = RoundedCornerShape(22.dp),
         fillHeight = true,

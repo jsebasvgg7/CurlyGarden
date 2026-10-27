@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.curlygarden.app.ui.components.CurlyDepthCard
 import com.curlygarden.app.ui.animation.entrance
 import com.curlygarden.app.ui.screens.talk.TalkBackground
 import com.curlygarden.app.ui.theme.CurlyColors
@@ -114,7 +115,7 @@ internal fun PlayThisOrThatScreen(
 
 @Composable
 private fun ThisOrThatIntro(state: PlayUiState, viewModel: PlayViewModel) {
-    PlayDepthCard(
+    CurlyDepthCard(
         color = PlayRose,
         shape = RoundedCornerShape(26.dp),
         modifier = Modifier.entrance(0)
@@ -336,7 +337,7 @@ private fun ThisOrThatResult(
         else -> "Mucho por descubrir del otro."
     }
 
-    PlayDepthCard(
+    CurlyDepthCard(
         color = PlayAccent,
         shape = RoundedCornerShape(26.dp),
         modifier = Modifier.entrance(0)

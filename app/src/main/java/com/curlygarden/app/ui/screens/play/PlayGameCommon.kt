@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.curlygarden.app.ui.components.CurlyDepthCard
 import com.curlygarden.app.ui.animation.entrance
 import com.curlygarden.app.ui.animation.pressScale
 import com.curlygarden.app.ui.theme.CurlyColors
@@ -77,7 +78,7 @@ internal fun PlayChoiceCard(
     textSize: TextUnit = 22.sp,
     textLineHeight: TextUnit = 28.sp
 ) {
-    PlayDepthCard(
+    CurlyDepthCard(
         color = color,
         shape = RoundedCornerShape(24.dp),
         onClick = if (enabled) onClick else null,

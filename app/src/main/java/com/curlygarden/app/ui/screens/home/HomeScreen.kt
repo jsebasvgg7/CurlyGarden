@@ -1,6 +1,7 @@
 package com.curlygarden.app.ui.screens.home
 
 import com.curlygarden.app.ui.animation.entrance
+import com.curlygarden.app.ui.components.CurlyDepthCard
 import com.curlygarden.app.ui.animation.pressScale
 import com.curlygarden.app.ui.animation.pressScale
 import androidx.compose.foundation.BorderStroke
@@ -432,7 +433,7 @@ private fun HomeModuleHeroCard(
 ) {
     val textDark = Color(0xFF26215C)
 
-    Surface(
+    CurlyDepthCard(
         onClick = onClick,
         shape = RoundedCornerShape(26.dp),
         color = CurlyColors.DarkLavenderLight,
@@ -488,18 +489,20 @@ private fun HomeModuleHeroCard(
                 Spacer(Modifier.height(14.dp))
                 Box(
                     modifier = Modifier
-                        .height(30.dp)
+                        .height(34.dp)
                         .width(100.dp)
                 ) {
                     HeroAvatar(
                         profile = myProfile,
+                        ringColor = CurlyColors.DarkLavenderLight,
                         modifier = Modifier.align(Alignment.CenterStart)
                     )
                     HeroAvatar(
                         profile = partnerProfile,
+                        ringColor = CurlyColors.DarkLavenderLight,
                         modifier = Modifier
                             .align(Alignment.CenterStart)
-                            .offset(x = 34.dp)
+                            .offset(x = 24.dp)
                     )
                     if (myProfile != null && partnerProfile == null) {
                         Surface(
@@ -508,7 +511,7 @@ private fun HomeModuleHeroCard(
                             color = textDark.copy(alpha = 0.18f),
                             modifier = Modifier
                                 .align(Alignment.CenterStart)
-                                .offset(x = 68.dp)
+                                .offset(x = 66.dp)
                                 .size(26.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
@@ -554,7 +557,7 @@ private fun PlaySpaceCard(
     val bg = Color(0xFFEBC27A)
     val textDark = Color(0xFF4A2E02)
 
-    Surface(
+    CurlyDepthCard(
         onClick = onClick,
         shape = RoundedCornerShape(26.dp),
         color = bg,
@@ -640,7 +643,7 @@ private fun ImagineSpaceCard(onClick: () -> Unit, modifier: Modifier = Modifier)
     val bg = Color(0xFFF4B7A6)
     val textDark = Color(0xFF4A1B0C)
 
-    Surface(
+    CurlyDepthCard(
         onClick = onClick,
         shape = RoundedCornerShape(24.dp),
         color = bg,
@@ -684,9 +687,9 @@ private fun ImagineSpaceCard(onClick: () -> Unit, modifier: Modifier = Modifier)
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.Center,
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 0.dp, bottom = 30.dp)
-                    .size(width = 68.dp, height = 68.dp)
+                    .align(Alignment.TopEnd)
+                    .padding(end = 4.dp, top = 6.dp)
+                    .size(width = 72.dp, height = 72.dp)
             )
 
             Surface(
@@ -715,7 +718,7 @@ private fun ChatSpaceCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
     val bg = Color(0xFF9BBFE0)
     val textDark = Color(0xFF042C53)
 
-    Surface(
+    CurlyDepthCard(
         onClick = onClick,
         shape = RoundedCornerShape(24.dp),
         color = bg,
@@ -786,11 +789,17 @@ private fun ChatSpaceCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun HeroAvatar(profile: HomeUserProfile?, modifier: Modifier = Modifier) {
+private fun HeroAvatar(
+    profile: HomeUserProfile?,
+    ringColor: Color,
+    modifier: Modifier = Modifier
+) {
     Box(
         Modifier
-            .size(30.dp)
+            .size(34.dp)
             .then(modifier)
+            .background(ringColor, CircleShape)
+            .padding(2.dp)
             .clip(CircleShape)
             .background(CurlyColors.DarkLavenderPrimary),
         contentAlignment = Alignment.Center
@@ -831,7 +840,7 @@ private fun TodaysMomentCard(
     }
     val textDark = Color(0xFF26215C)
 
-    Surface(
+    CurlyDepthCard(
         onClick = onClick,
         shape = RoundedCornerShape(24.dp),
         color = Color(0xFFBFB9FD),
