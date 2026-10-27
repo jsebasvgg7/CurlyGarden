@@ -470,7 +470,8 @@ private fun PlayGameCard(
                             color = PlayAccentText,
                             fontSize = 12.sp,
                             lineHeight = 16.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
                         )
                     }
                 }
@@ -557,7 +558,7 @@ private fun gamePill(state: PlayUiState, type: PlayGameType): String =
     when (state.gameState(type)) {
         GameCardState.NEW_GAME ->
             if (state.activeSession(type) != null) "Te toca jugar" else "Nueva partida"
-        GameCardState.WAITING -> "Esperando al otro"
+        GameCardState.WAITING -> "Esperando..."
         GameCardState.YOUR_TURN_TO_GUESS -> "Te toca adivinar"
         GameCardState.SEE_RESULT -> "Ver resultado"
     }
