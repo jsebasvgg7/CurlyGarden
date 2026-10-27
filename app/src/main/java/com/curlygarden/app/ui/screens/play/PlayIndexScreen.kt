@@ -301,7 +301,7 @@ private fun PlayDailyHero(
 ) {
     val label = when (cardState) {
         DailyCardState.PENDING -> "Ver reto"
-        DailyCardState.WAITING -> "Esperando al otro"
+        DailyCardState.WAITING -> "Esperando..."
         DailyCardState.COMPLETED -> "Ver resultado"
     }
     val waiting = cardState == DailyCardState.WAITING
